@@ -1,0 +1,6 @@
+<Solution>
+  <Project Path="DDDProject.API/DDDProject.API.csproj" />
+  <Project Path="DDDProject.Application/DDDProject.Application.csproj" />
+  <Project Path="DDDProject.Domain/DDDProject.Domain.csproj" />
+  <Project Path="DDDProject.Infrastructure/DDDProject.Infrastructure.csproj" />
+</Solution>
