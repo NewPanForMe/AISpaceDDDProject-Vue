@@ -5,9 +5,13 @@ using DDDProject.Domain.Helpers;
 using DDDProject.Domain.Repositories;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
+using System;
+using System.Collections.Generic;
 using System.IdentityModel.Tokens.Jwt;
+using System.Linq;
 using System.Security.Claims;
 using System.Text;
+using System.Threading.Tasks;
 
 namespace DDDProject.Application.Services;
 
@@ -32,7 +36,7 @@ public class LoginService : ILoginService
     /// </summary>
     /// <param name="request">登录请求</param>
     /// <returns>登录结果</returns>
-    public ApiRequestResult Login(LoginRequest request)
+    public async Task<ApiRequestResult> LoginAsync(LoginRequest request)
     {
         if (string.IsNullOrEmpty(request.UserName) || string.IsNullOrEmpty(request.Password))
         {
@@ -43,11 +47,15 @@ public class LoginService : ILoginService
             };
         }
 
+        // 解密密码
+        var decryptedPassword = PasswordHelper.DecryptPassword(request.Password);
+        
         // 计算密码哈希
-        var passwordHash = PasswordHelper.ComputeHash(request.Password);
+        var passwordHash = PasswordHelper.ComputeHash(decryptedPassword);
 
         // 查询用户
-        var user = _userRepository.GetList(u => u.UserName == request.UserName && u.PasswordHash == passwordHash).FirstOrDefault();
+        var users = await _userRepository.GetListAsync(u => u.UserName == request.UserName && u.PasswordHash == passwordHash);
+        var user = await Task.Run(() => users.FirstOrDefault());
 
         if (user == null)
         {
@@ -59,7 +67,7 @@ public class LoginService : ILoginService
         }
 
         // 创建 Token
-        var token = CreateJwtToken(user);
+        var token = await CreateJwtTokenAsync(user);
 
         // 更新登录信息
         user.UpdateLoginInfo(GetClientIpAddress());
@@ -94,7 +102,7 @@ public class LoginService : ILoginService
     /// </summary>
     /// <param name="user">用户实体</param>
     /// <returns>JWT Token 字符串</returns>
-    private string CreateJwtToken(User user)
+    private async Task<string> CreateJwtTokenAsync(User user)
     {
         // 创建 Claim 列表
         var claims = new List<Claim>
@@ -134,6 +142,6 @@ public class LoginService : ILoginService
         );
 
         // 返回 Token 字符串
-        return new JwtSecurityTokenHandler().WriteToken(token);
+        return await Task.Run(() => new JwtSecurityTokenHandler().WriteToken(token));
     }
 }

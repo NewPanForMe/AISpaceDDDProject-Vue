@@ -28,10 +28,11 @@ public class LoginController : BaseApiController
     /// </summary>
     /// <param name="request">登录请求</param>
     /// <returns>登录结果</returns>
-    [HttpPost]
+    [HttpPost()]
+    [ActionName("LoginAsync")]
     [ApiSearch(Name = "用户登录", Description = "用户登录验证", Category = "认证")]
-    public ApiRequestResult Login([FromBody] LoginRequest request)
+    public async Task<ApiRequestResult> LoginAsync([FromBody] LoginRequest request)
     {
-        return _loginService.Login(request);
+        return await _loginService.LoginAsync(request);
     }
 }

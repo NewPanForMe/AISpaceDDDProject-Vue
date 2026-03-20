@@ -1,4 +1,5 @@
 using DDDProject.Application.DTOs;
+using System.Threading.Tasks;
 
 namespace DDDProject.Application.Interfaces;
 
@@ -12,5 +13,5 @@ public interface ILoginService : IApplicationService
     /// </summary>
     /// <param name="request">登录请求</param>
     /// <returns>登录结果</returns>
-    ApiRequestResult Login(LoginRequest request);
+    Task<ApiRequestResult> LoginAsync(LoginRequest request);
 }

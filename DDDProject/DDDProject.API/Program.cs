@@ -1,9 +1,19 @@
 
 using DDDProject.Application.Interfaces;
-using DDDProject.Application.Services;
 using DDDProject.Infrastructure;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// 添加 CORS 策略
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowAll", policy =>
+    {
+        policy.AllowAnyOrigin()
+              .AllowAnyMethod()
+              .AllowAnyHeader();
+    });
+});
 
 // 添加服务到容器
 builder.Services.AddControllers();
@@ -23,12 +33,11 @@ builder.Services.Scan(scan => scan
     .WithScopedLifetime()
 );
 
-// 注册 ApiSearchService
-builder.Services.AddScoped<ApiSearchService>();
 
 var app = builder.Build();
 
 // 配置 HTTP 请求管道
+// 开发环境禁用 HTTPS 重定向，避免 OPTIONS 预检请求 307 重定向错误
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
@@ -38,10 +47,12 @@ if (app.Environment.IsDevelopment())
     });
 }
 
-app.UseHttpsRedirection();
+//app.UseHttpsRedirection();
+
+app.UseCors("AllowAll");
 app.UseAuthorization();
 
 // 映射控制器
 app.MapControllers();
-app.MapGet("/", () => "HelloWorld");
+app.MapGet("/", () => "Hello World");
 app.Run();

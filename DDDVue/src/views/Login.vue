@@ -1,37 +1,137 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
+import { ElMessage } from 'element-plus'
+import {
+  DataLine,
+  Lock,
+  TrendCharts,
+  User,
+  Management,
+  DataAnalysis,
+  CircleCheck,
+  ChatDotRound
+} from '@element-plus/icons-vue'
+import { http } from '../utils/http'
+import api from '../api/index'
+import { showSuccessNotification } from '../utils/notification'
+import { aesEncrypt } from '../utils/crypto'
+
+
+
+// 登录响应数据定义
+interface LoginResponse {
+  success: boolean
+  message?: string
+  data?: {
+    token?: string
+    userId?: string
+    userName?: string
+    realName?: string
+  }
+}
+
+// 图标组件映射
+const iconComponents = {
+  Management,
+  DataAnalysis,
+  CircleCheck,
+  ChatDotRound
+}
+
+const router = useRouter()
+
+const formRef = ref()
 
 const form = ref({
-  username: '',
+  userName: '',
   password: ''
 })
 
 const rememberMe = ref(false)
+const loading = ref(false)
 
 // 左侧品牌文案
 const brandTexts = ref([
   { title: '智能管理', icon: 'Management', desc: '统一管理所有资源' },
   { title: '数据分析', icon: 'DataAnalysis', desc: '实时数据可视化' },
-  { title: '安全保障', icon: 'Shield', desc: '多重安全防护' },
-  { title: '高效协作', icon: 'Team', desc: '团队协同办公' }
+  { title: '安全保障', icon: 'CircleCheck', desc: '多重安全防护' },
+  { title: '高效协作', icon: 'ChatDotRound', desc: '团队协同办公' }
 ])
 
 const currentTextIndex = ref(0)
 
+// 获取图标组件
+const getIconComponent = (iconName: string) => {
+  return iconComponents[iconName as keyof typeof iconComponents]
+}
+
 const rules = {
-  username: [
+  userName: [
     { required: true, message: '请输入用户名', trigger: 'blur' },
     { min: 3, max: 20, message: '长度在 3 到 20 个字符', trigger: 'blur' }
   ],
   password: [
     { required: true, message: '请输入密码', trigger: 'blur' },
-    { min: 6, max: 20, message: '长度在 6 到 20 个字符', trigger: 'blur' }
+    { min: 5, max: 20, message: '长度在 5 到 20 个字符', trigger: 'blur' }
   ]
 }
 
-const handleSubmit = () => {
-  // TODO: 实现登录逻辑
-  console.log('提交表单:', form.value)
+const handleSubmit = async () => {
+  if (!formRef.value) return
+
+  loading.value = true
+  try {
+    // 验证表单
+    await formRef.value.validate((valid: boolean) => {
+      if (!valid) {
+        throw new Error('表单验证失败')
+      }
+    })
+
+    // 调用登录接口
+    const response = await http.post<LoginResponse>(api.Login.Login, {
+      userName: form.value.userName,
+      password: aesEncrypt(form.value.password)
+    })
+    // 处理登录结果
+    if (response.success) {
+
+      // 保存 token
+      const token = response.data?.token || ''
+      if (token) {
+        localStorage.setItem('token', token)
+      }
+
+      // 保存用户信息
+      const userInfo = {
+        userId: response.data?.userId,
+        userName: response.data?.userName,
+        realName: response.data?.realName
+      }
+      if (response.data?.userName) {
+        localStorage.setItem('userInfo', JSON.stringify(userInfo))
+      }
+
+      // 显示成功提示
+      showSuccessNotification({
+        title: '登录成功',
+        message: '欢迎回来，' + response.data?.realName
+      })
+
+      // 跳转到首页
+      router.push('/dashboard')
+    } else {
+      // 登录失败
+      ElMessage.error(response.message || '登录失败，请检查用户名和密码')
+    }
+  } catch (error: any) {
+    console.error('登录错误:', error)
+    const errorMessage = error?.message || '登录失败，请稍后重试'
+    ElMessage.error(errorMessage)
+  } finally {
+    loading.value = false
+  }
 }
 
 // 轮播文案
@@ -78,7 +178,7 @@ onMounted(() => {
             :class="{ active: index === currentTextIndex }">
             <div class="feature-icon">
               <el-icon :size="24">
-                <component :is="item.icon" />
+                <component :is="getIconComponent(item.icon)" />
               </el-icon>
             </div>
             <div class="feature-text">
@@ -123,8 +223,8 @@ onMounted(() => {
         </div>
 
         <el-form ref="formRef" :model="form" :rules="rules" class="login-form" size="large">
-          <el-form-item prop="username">
-            <el-input v-model="form.username" placeholder="用户名" prefix-icon="User" clearable />
+          <el-form-item prop="userName">
+            <el-input v-model="form.userName" placeholder="用户名" prefix-icon="User" clearable />
           </el-form-item>
 
           <el-form-item prop="password">
@@ -137,7 +237,7 @@ onMounted(() => {
           </el-form-item>
 
           <el-form-item>
-            <el-button type="primary" class="login-btn" @click="handleSubmit">
+            <el-button type="primary" class="login-btn" :loading="loading" @click="handleSubmit">
               登录
             </el-button>
           </el-form-item>

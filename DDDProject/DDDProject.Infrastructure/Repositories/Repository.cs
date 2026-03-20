@@ -3,6 +3,8 @@ using DDDProject.Domain.Repositories;
 using DDDProject.Domain.Entities;
 using DDDProject.Infrastructure.Contexts;
 using System.Linq.Expressions;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace DDDProject.Infrastructure.Repositories;
 
@@ -11,7 +13,7 @@ namespace DDDProject.Infrastructure.Repositories;
 /// </summary>
 /// <typeparam name="TEntity">实体类型</typeparam>
 /// <typeparam name="TId">主键类型</typeparam>
-public class Repository<TEntity, TId> : IRepository<TEntity, TId> 
+public class Repository<TEntity, TId> : IRepository<TEntity, TId>
     where TEntity : Entity<TId>
 {
     private readonly ApplicationDbContext _context;
@@ -53,8 +55,8 @@ public class Repository<TEntity, TId> : IRepository<TEntity, TId>
         await _context.SaveChangesAsync(cancellationToken);
     }
 
-    public IEnumerable<TEntity> GetList(Expression<Func<TEntity, bool>> predicate)
+    public async Task<IEnumerable<TEntity>> GetListAsync(Expression<Func<TEntity, bool>> predicate, CancellationToken cancellationToken = default)
     {
-        return _dbSet.Where(predicate);
+        return await _dbSet.Where(predicate).ToListAsync(cancellationToken);
     }
 }
