@@ -21,6 +21,7 @@ const menuList = ref<MenuItem[]>([
   { path: '/dashboard', name: '首页', icon: markRaw(Collection) },
   { path: '/users', name: '用户管理', icon: markRaw(User) },
   { path: '/products', name: '产品管理', icon: markRaw(Menu) },
+  { path: '/menu', name: '菜单管理', icon: markRaw(Menu) },
   { path: '/settings', name: '系统设置', icon: markRaw(Setting) }
 ])
 

@@ -76,7 +76,7 @@ public class User : AggregateRoot
             Email = email,
             PasswordHash = passwordHash,
             RealName = realName,
-            CreatedAt = DateTime.UtcNow
+            CreatedAt = DateTime.Now  // 使用本地时间（中国标准时间）
         };
 
         return user;
@@ -107,7 +107,7 @@ public class User : AggregateRoot
         if (!string.IsNullOrEmpty(remark))
             Remark = remark;
 
-        UpdatedAt = DateTime.UtcNow;
+        UpdatedAt = DateTime.Now; // 使用本地时间（中国标准时间）
     }
 
     /// <summary>
@@ -117,7 +117,7 @@ public class User : AggregateRoot
     public void UpdatePassword(string newPasswordHash)
     {
         PasswordHash = newPasswordHash;
-        UpdatedAt = DateTime.UtcNow;
+        UpdatedAt = DateTime.Now; // 使用本地时间（中国标准时间）
     }
 
     /// <summary>
@@ -126,9 +126,9 @@ public class User : AggregateRoot
     /// <param name="ip">登录IP</param>
     public void UpdateLoginInfo(string ip)
     {
-        LastLoginTime = DateTime.UtcNow;
+        LastLoginTime = DateTime.Now; // 使用本地时间（中国标准时间）
         LastLoginIp = ip;
-        UpdatedAt = DateTime.UtcNow;
+        UpdatedAt = DateTime.Now; // 使用本地时间（中国标准时间）
     }
 
     /// <summary>
@@ -137,7 +137,7 @@ public class User : AggregateRoot
     public void Enable()
     {
         Status = 1;
-        UpdatedAt = DateTime.UtcNow;
+        UpdatedAt = DateTime.Now; // 使用本地时间（中国标准时间）
     }
 
     /// <summary>
@@ -146,7 +146,7 @@ public class User : AggregateRoot
     public void Disable()
     {
         Status = 0;
-        UpdatedAt = DateTime.UtcNow;
+        UpdatedAt = DateTime.Now; // 使用本地时间（中国标准时间）
     }
 
     /// <summary>

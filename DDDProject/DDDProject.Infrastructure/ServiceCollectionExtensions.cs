@@ -4,6 +4,7 @@ using DDDProject.Domain.Repositories;
 using DDDProject.Infrastructure.Repositories;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using DDDProject.Infrastructure.Services;
 
 namespace DDDProject.Infrastructure;
 
@@ -28,7 +29,11 @@ public static class ServiceCollectionExtensions
     /// </summary>
     public static IServiceCollection AddRepositories(this IServiceCollection services)
     {
-        services.AddScoped(typeof(IRepository<,>), typeof(Repository<,>));
+        services.AddScoped(typeof(IRepository<,>), typeof(Infrastructure.Repositories.Repository<,>));
+        services.AddScoped(typeof(IRepository<>), typeof(Infrastructure.Repositories.Repository<>));
+        
+        // 注册时间服务
+        services.AddScoped<ITimeService, ChinaStandardTimeService>();
         
         return services;
     }

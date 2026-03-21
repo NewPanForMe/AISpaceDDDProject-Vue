@@ -1,0 +1,147 @@
+using DDDProject.Application.Interfaces;
+using DDDProject.Infrastructure;
+using DDDProject.Infrastructure.Contexts;
+using DDDProject.Infrastructure.Seed;
+using DDDProject.API.Extensions;
+using DDDProject.API.Middlewares;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
+using System.Text;
+using Microsoft.AspNetCore.Routing;
+using DDDProject.Domain.Repositories;
+using DDDProject.Application.Services;
+
+namespace DDDProject.API
+{
+    public class Startup
+    {
+        public IConfiguration Configuration { get; }
+
+        public Startup(IConfiguration configuration)
+        {
+            Configuration = configuration;
+        }
+
+        public void ConfigureServices(IServiceCollection services)
+        {
+            // 添加 CORS 策略
+            services.AddCors(options =>
+            {
+                options.AddPolicy("AllowAll", policy =>
+                {
+                    policy.AllowAnyOrigin()
+                          .AllowAnyMethod()
+                          .AllowAnyHeader();
+                });
+            });
+
+            // 添加服务到容器
+            services.AddControllers();
+            services.AddEndpointsApiExplorer();
+            services.AddSwaggerGen();
+
+            // 添加配置绑定
+            services.Configure<JwtSettings>(Configuration.GetSection("JwtSettings"));
+
+            // 添加数据库上下文
+            var connectionString = Configuration.GetConnectionString("DefaultConnection");
+            services.AddApplicationDbContext(connectionString);
+            services.AddRepositories();
+
+            // 自动注册所有继承自 IApplicationService 的接口和实现类（Scoped）
+            services.Scan(scan => scan
+                .FromAssemblyOf<IApplicationService>()
+                .AddClasses(classes => classes.AssignableTo<IApplicationService>())
+                .AsImplementedInterfaces()
+                .WithScopedLifetime()
+            );
+
+            // 添加JWT认证
+            var jwtSettings = Configuration.GetSection("JwtSettings").Get<JwtSettings>();
+            services.AddAuthentication(authen =>
+            {
+                authen.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+                authen.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+            })
+            .AddJwtBearer(bearer =>
+            {
+                bearer.RequireHttpsMetadata = false; // 在开发环境中可以设为false
+                bearer.SaveToken = true;
+
+                bearer.TokenValidationParameters = new TokenValidationParameters
+                {
+                    ValidateIssuerSigningKey = true,
+                    IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings.Key)),
+                    ValidateIssuer = true,
+                    ValidIssuer = jwtSettings.Issuer,
+                    ValidateAudience = true,
+                    ValidAudience = jwtSettings.Audience,
+                    ValidateLifetime = true,
+                    ClockSkew = TimeSpan.Zero // 设置为零以严格限制令牌生命周期
+                };
+            });
+
+            services.AddHttpContextAccessor();
+            services.AddScoped<CurrentUser>();
+        }
+
+        public void Configure(IApplicationBuilder app, IWebHostEnvironment env, ILogger<Program> logger)
+        {
+            // 应用 HTTP 请求管道配置
+            if (env.IsDevelopment())
+            {
+                app.UseSwagger();
+                app.UseSwaggerUI(c =>
+                {
+                    c.SwaggerEndpoint("/swagger/v1/swagger.json", "DDDProject API V1");
+                });
+            }
+
+            // 应用数据库迁移并初始化数据
+            using (var scope = app.ApplicationServices.CreateScope())
+            {
+                var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+
+                try
+                {
+                    // 应用任何挂起的迁移
+                    // 注意：如果出现待处理的模型更改错误，请先添加新迁移
+                    context.Database.Migrate();
+
+                    // 初始化种子数据
+                    context.SeedUsers();
+                    context.SeedMenus();
+                    logger.LogInformation("数据库初始化完成，用户表和菜单表已同步并创建了初始数据。");
+                }
+                catch (Exception ex)
+                {
+                    logger.LogError(ex, "An error occurred while seeding the database.");
+                    // 不抛出异常，而是继续启动
+                    logger.LogWarning("数据库迁移或初始化失败，但应用程序将继续启动。");
+                }
+            }
+
+            // 配置 HTTP 请求管道
+            // 开发环境禁用 HTTPS 重定向，避免 OPTIONS 预检请求 307 重定向错误
+            //app.UseHttpsRedirection();
+
+            app.UseCors("AllowAll");
+
+            // 添加自定义权限检查中间件
+            app.UseMiddleware<PermissionCheckMiddleware>();
+
+            app.UseRouting(); // 添加路由中间件
+            
+            // 必须在 UseRouting 之后，但在 UseEndpoints 之前使用认证中间件
+            app.UseAuthentication();
+            app.UseAuthorization();
+
+            app.UseEndpoints(endpoints =>
+            {
+                endpoints.MapControllers();
+                endpoints.MapGet("/", () => "Hello World");
+            });
+        }
+    }
+}

@@ -27,6 +27,11 @@ public class ApplicationDbContext : DbContext
     /// </summary>
     public DbSet<User> Users => Set<User>();
 
+    /// <summary>
+    /// 菜单集合
+    /// </summary>
+    public DbSet<Menu> Menus => Set<Menu>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -39,10 +44,13 @@ public class ApplicationDbContext : DbContext
             entity.Property(e => e.Id).ValueGeneratedOnAdd();
             entity.Property(e => e.Name).IsRequired().HasMaxLength(100);
             entity.Property(e => e.Description).HasMaxLength(500);
-            entity.Property(e => e.CreatedAt).HasDefaultValueSql("GETDATE()");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("GETDATE()"); // 使用服务器本地时间
         });
 
         // 配置用户实体
         modelBuilder.ApplyConfiguration(new UserConfiguration());
+
+        // 配置菜单实体
+        modelBuilder.ApplyConfiguration(new MenuConfiguration());
     }
 }

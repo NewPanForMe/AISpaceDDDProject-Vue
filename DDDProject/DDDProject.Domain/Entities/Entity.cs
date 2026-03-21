@@ -1,3 +1,5 @@
+using System.Globalization;
+
 namespace DDDProject.Domain.Entities;
 
 /// <summary>
@@ -8,7 +10,7 @@ public abstract class Entity<TId>
 {
     public virtual TId Id { get; protected set; } = default!;
 
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public DateTime CreatedAt { get; set; } = DateTime.Now; // 使用本地时间（中国标准时间）
     public DateTime? UpdatedAt { get; set; }
 
     public override bool Equals(object? obj)

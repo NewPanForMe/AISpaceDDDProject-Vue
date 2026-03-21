@@ -24,6 +24,6 @@ public class ExampleAggregate : AggregateRoot
     {
         Name = name;
         Description = description;
-        UpdatedAt = DateTime.UtcNow;
+        UpdatedAt = DateTime.Now; // 使用本地时间（中国标准时间）
     }
 }

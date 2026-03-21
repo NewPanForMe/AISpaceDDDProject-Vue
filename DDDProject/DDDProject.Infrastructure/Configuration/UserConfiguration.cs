@@ -72,7 +72,7 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
 
         // 创建时间
         builder.Property(u => u.CreatedAt)
-            .HasDefaultValueSql("GETDATE()");
+            .HasDefaultValueSql("GETDATE()");  // GETDATE() 返回服务器本地时间
 
         // 更新时间
         builder.Property(u => u.UpdatedAt);

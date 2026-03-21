@@ -81,7 +81,7 @@ Data Source=.;Initial Catalog=AiSpace;Persist Security Info=True;User ID=sa;Pass
 
 ### 3. Infrastructure Layer（基础设施层）
 - **Contexts**: 数据库上下文（ApplicationDbContext）
-- **Repositories**: 仓储的具体实现（Repository）
+- **Repositories**: 仓储的具体实现（Repository、RepositorySimple）
 - **Configuration**: 配置类
 - **Migrations**: 数据库迁移文件
 
@@ -220,6 +220,64 @@ npm run preview
    - `IApplicationService` 是所有应用服务的基接口
 4. **异步方法命名**: 所有异步方法名必须添加 `Async` 后缀
 5. **数据库操作**: 所有数据库操作必须使用异步方法
+6. **返回值处理**: Service方法返回ApiRequestResult时，应直接使用`new ApiRequestResult`创建实例，模仿LoginService中的风格：
+   ```csharp
+   // 正确方式：直接创建新实例
+   return new ApiRequestResult
+   {
+       Success = true,
+       Message = "操作成功",
+       Data = result
+   };
+   
+   return new ApiRequestResult
+   {
+       Success = false,
+       Message = "操作失败信息",
+       Data = null
+   };
+   ```
+   例如，参照LoginService中方法的返回值设定：
+   ```csharp
+   // 登录服务示例 - 在LoginService.cs中
+   public async Task<ApiRequestResult> LoginAsync(LoginRequest request)
+   {
+       try
+       {
+           var decryptedPassword = PasswordHelper.DecryptPassword(request.Password);
+           var passwordHash = PasswordHelper.ComputeHash(decryptedPassword);
+   
+           var users = await _userRepository.GetListAsync(u => u.UserName == request.UserName && u.PasswordHash == passwordHash);
+           var user = users.FirstOrDefault();
+   
+           if (user == null)
+           {
+               return new ApiRequestResult
+               {
+                   Success = false,
+                   Message = "用户名或密码错误",
+                   Data = null
+               };
+           }
+   
+           return new ApiRequestResult
+           {
+               Success = true,
+               Message = "登录成功",
+               Data = new { UserId = user.Id, UserName = user.UserName, NickName = user.NickName }
+           };
+       }
+       catch (Exception ex)
+       {
+           return new ApiRequestResult
+           {
+               Success = false,
+               Message = $"登录失败: {ex.Message}",
+               Data = null
+           };
+       }
+   }
+   ```
 
 ### Service 层异步示例
 
@@ -227,11 +285,12 @@ npm run preview
 // IUserDataService.cs (Interfaces 目录)
 public interface IUserDataService : IApplicationService
 {
-    Task<UserData> GetUserByIdAsync(Guid userId);
-    Task<List<UserData>> GetAllUsersAsync();
-    Task<UserData> CreateUserAsync(UserData user);
-    Task<UserData> UpdateUserAsync(UserData user);
-    Task<bool> DeleteUserAsync(Guid userId);
+    Task<ApiRequestResult> GetUserByIdAsync(Guid userId);
+    Task<ApiRequestResult> GetAllUsersAsync();
+    Task<ApiRequestResult> CreateUserAsync(UserData user);
+    Task<ApiRequestResult> UpdateUserAsync(UserData user);
+    Task<ApiRequestResult> DeleteUserAsync(Guid userId);
+    Task<ApiRequestResult> GetUserDataAsync(Guid userId);
 }
 
 // UserDataService.cs (Services 目录)
@@ -244,42 +303,88 @@ public class UserDataService : IUserDataService
         _userRepository = userRepository;
     }
 
-    public async Task<UserData> GetUserByIdAsync(Guid userId)
+    public async Task<ApiRequestResult> GetUserByIdAsync(Guid userId)
     {
         // 使用 FindAsync 替代 Find
-        return await _userRepository.FindAsync(userId);
+        var user = await _userRepository.FindAsync(userId);
+        return new ApiRequestResult
+        {
+            Success = user != null,
+            Message = user != null ? "获取用户成功" : "用户不存在",
+            Data = user
+        };
     }
 
-    public async Task<List<UserData>> GetAllUsersAsync()
+    public async Task<ApiRequestResult> GetAllUsersAsync()
     {
         // 使用 ToListAsync 替代 ToList
-        return await _userRepository.GetListAsync(u => true);
+        var users = await _userRepository.GetListAsync(u => true);
+        return new ApiRequestResult
+        {
+            Success = true,
+            Message = "获取用户列表成功",
+            Data = users
+        };
     }
 
-    public async Task<UserData> CreateUserAsync(UserData user)
+    public async Task<ApiRequestResult> CreateUserAsync(UserData user)
     {
         // 使用 AddAsync 替代 Add
         await _userRepository.AddAsync(user);
         // 使用 SaveChangesAsync 替代 SaveChanges
         await _userRepository.SaveChangesAsync();
-        return user;
+        return new ApiRequestResult
+        {
+            Success = true,
+            Message = "创建用户成功",
+            Data = user
+        };
     }
 
-    public async Task<UserData> UpdateUserAsync(UserData user)
+    public async Task<ApiRequestResult> UpdateUserAsync(UserData user)
     {
         _userRepository.Update(user);
         await _userRepository.SaveChangesAsync();
-        return user;
+        return new ApiRequestResult
+        {
+            Success = true,
+            Message = "更新用户成功",
+            Data = user
+        };
     }
 
-    public async Task<bool> DeleteUserAsync(Guid userId)
+    public async Task<ApiRequestResult> DeleteUserAsync(Guid userId)
     {
         var user = await _userRepository.FindAsync(userId);
-        if (user == null) return false;
+        if (user == null) 
+        {
+            return new ApiRequestResult
+            {
+                Success = false,
+                Message = "用户不存在",
+                Data = null
+            };
+        }
         
         _userRepository.Remove(user);
         await _userRepository.SaveChangesAsync();
-        return true;
+        return new ApiRequestResult
+        {
+            Success = true,
+            Message = "删除用户成功",
+            Data = null
+        };
+    }
+
+    public async Task<ApiRequestResult> GetUserDataAsync(Guid userId)
+    {
+        var user = await _userRepository.FindAsync(userId);
+        return new ApiRequestResult
+        {
+            Success = user != null,
+            Message = user != null ? "获取用户数据成功" : "用户不存在",
+            Data = user
+        };
     }
 }
 ```
@@ -297,33 +402,35 @@ public class UserDataController : BaseApiController
     }
 
     [HttpGet("{id}")]
-    public async Task<IActionResult> GetUserById(Guid id)
+    [ActionName("GetUserByIdAsync")]
+    public async Task<ApiRequestResult> GetUserByIdAsync(Guid id)
     {
-        var user = await _userDataService.GetUserByIdAsync(id);
-        if (user == null)
-            return NotFound();
-        return Ok(user);
+        var result = await _userDataService.GetUserByIdAsync(id);
+        return result; // Assuming service returns ApiRequestResult
     }
 
     [HttpGet]
-    public async Task<IActionResult> GetAllUsers()
+    [ActionName("GetAllUsersAsync")]
+    public async Task<ApiRequestResult> GetAllUsersAsync()
     {
-        var users = await _userDataService.GetAllUsersAsync();
-        return Ok(users);
+        var result = await _userDataService.GetAllUsersAsync();
+        return result; // Assuming service returns ApiRequestResult
     }
 
     [HttpPost]
-    public async Task<IActionResult> CreateUser([FromBody] UserData user)
+    [ActionName("CreateUserAsync")]
+    public async Task<ApiRequestResult> CreateUserAsync([FromBody] UserData user)
     {
-        var createdUser = await _userDataService.CreateUserAsync(user);
-        return CreatedAtAction(nameof(GetUserById), new { id = createdUser.Id }, createdUser);
+        var result = await _userDataService.CreateUserAsync(user);
+        return result; // Assuming service returns ApiRequestResult
     }
 
     [HttpPut]
-    public async Task<IActionResult> UpdateUser([FromBody] UserData user)
+    [ActionName("UpdateUserAsync")]
+    public async Task<ApiRequestResult> UpdateUserAsync([FromBody] UserData user)
     {
-        var updatedUser = await _userDataService.UpdateUserAsync(user);
-        return Ok(updatedUser);
+        var result = await _userDataService.UpdateUserAsync(user);
+        return result; // Assuming service returns ApiRequestResult
     }
 
     [HttpDelete("{id}")]
@@ -352,6 +459,7 @@ public class UserDataController : BaseApiController
 - **必须使用 `[ActionName("方法名")]` 注解**，确保路由路径与方法名一致
 - **HTTP 方法注解**（如 `[HttpPost]`、`[HttpGet]` 等）不需要指定路径
 - **路由模板**在控制器级别使用 `[Route("api/[controller]/[action]")]`，其中 `[action]` 会自动使用方法名
+- 控制器的注解无需   [ActionName("方法名")] 
 
 #### 2. 注解格式
 ```csharp
@@ -429,26 +537,45 @@ public async Task<IActionResult> LoginAsync([FromBody] LoginRequest request)
 
 #### 6. 完整示例
 ```csharp
+using Microsoft.AspNetCore.Mvc;
+using DDDProject.Application.DTOs;
+using DDDProject.Application.Interfaces;
+using DDDProject.Application.Common;
+
+namespace DDDProject.API.Controllers;
+
+/// <summary>
+/// 登录控制器
+/// </summary>
 [ApiController]
-[Route("api/[controller]/[action]")]  // 路由模板：api/Login/LoginAsync
+[Route("api/[controller]/[action]")]
 public class LoginController : BaseApiController
 {
     private readonly ILoginService _loginService;
 
+    /// <summary>
+    /// 构造函数
+    /// </summary>
+    /// <param name="loginService">登录服务</param>
     public LoginController(ILoginService loginService)
     {
         _loginService = loginService;
     }
 
-    // ✅ 正确：使用 [ActionName] 指定路由路径
-    [HttpPost]
+    /// <summary>
+    /// 登录
+    /// </summary>
+    /// <param name="request">登录请求</param>
+    /// <returns>登录结果</returns>
+    [HttpPost()]
     [ActionName("LoginAsync")]
-    public async Task<IActionResult> LoginAsync([FromBody] LoginRequest request)
+    [ApiSearch(Name = "用户登录", Description = "用户登录验证", Category = "认证")]
+    public async Task<ApiRequestResult> LoginAsync([FromBody] LoginRequest request)
     {
-        var result = await _loginService.LoginAsync(request);
-        return Ok(result);
+        return await _loginService.LoginAsync(request);
     }
 }
+
 ```
 
 **前端 API 配置对应**:
@@ -467,13 +594,104 @@ const api = {
 - 方法名: `LoginAsync` → `[action]` = `[ActionName]` 的值 = `LoginAsync`
 - 最终路由: `api/Login/LoginAsync`
 
-### Repository 层异步实现示例
+
+
+#### 控制器实现最佳实践 - 以LoginController为例
+
+在本项目中，所有Controller应该参考LoginController的编写方式进行实现。特别是以下几点需要注意：
+
+LoginController作为标准的范例，展示了正确的编写规范：
+
+```csharp
+using Microsoft.AspNetCore.Mvc;
+using DDDProject.Application.DTOs;
+using DDDProject.Application.Interfaces;
+using DDDProject.Application.Common;
+
+namespace DDDProject.API.Controllers;
+
+/// <summary>
+/// 登录控制器
+/// </summary>
+[ApiController]
+[Route("api/[controller]/[action]")]
+public class LoginController : BaseApiController
+{
+    private readonly ILoginService _loginService;
+
+    /// <summary>
+    /// 构造函数
+    /// </summary>
+    /// <param name="loginService">登录服务</param>
+    public LoginController(ILoginService loginService)
+    {
+        _loginService = loginService;
+    }
+
+    /// <summary>
+    /// 登录
+    /// </summary>
+    /// <param name="request">登录请求</param>
+    /// <returns>登录结果</returns>
+    [HttpPost()]
+    [ActionName("LoginAsync")]
+    [ApiSearch(Name = "用户登录", Description = "用户登录验证", Category = "认证")]
+    public async Task<ApiRequestResult> LoginAsync([FromBody] LoginRequest request)
+    {
+        return await _loginService.LoginAsync(request);
+    }
+}
+
+```
+
+#### Service 层返回值约定
+
+所有Service方法的返回类型应该是 `Task<ApiRequestResult>` 或相关泛型变体。这是为了让控制器能够方便地返回统一格式的结果：
+
+```csharp
+// 在服务中
+public async Task<ApiRequestResult> LoginAsync(LoginRequest request)
+{
+    // 业务逻辑
+    return new ApiRequestResult
+    {
+        Success = true,
+        Message = "登录成功",
+        Data = userInfo
+    };
+}
+```
+
+#### 编写要点
+
+1. **继承BaseApiController**: 所有控制器必须继承 `BaseApiController`
+2. **注入服务**: 通过构造函数注入所需的Service
+3. **使用[ActionName]**: 按照注解规范使用ActionName
+4. **异步方法**: 控制器方法使用 `async/await` 并返回 `Task<IActionResult>`
+5. **引用ApiSearch**: 添加适当的`[ApiSearch]`标签用于接口发现
+6. **统一返回**: 调用服务层方法后，直接返回 `Ok(result)` 给前端
+7. **Service返回值**: 所有服务方法必须返回 `Task<ApiRequestResult>` 使得Controller可以直接转发结果
+
+### Repository 层异步实现说明
+
+#### 双泛型仓储实现（Repository<TEntity, TId>）
+**文件位置**: `DDDProject.Infrastructure.Repositories.Repository.cs`
+- 实现 `IRepository<TEntity, TId>` 接口（带实体和ID类型）
+- 针对各种主键类型的通用实体仓储实现
+
+#### 单泛型仓储实现（Repository<TEntity>）
+**文件位置**: `DDDProject.Infrastructure.Repositories.RepositorySimple.cs`
+- 实现 `IRepository<TEntity>` 接口（仅带实体类型，默认Guid主键）
+- 专门针对使用Guid作为主键的实体的仓储实现
+- 服务于Menu、User等需要IRepository<Menu>和IRepository<User>的场景
+
+#### RepositorySimple示例实现
 
 ```csharp
 public class Repository<TEntity> : IRepository<TEntity> where TEntity : Entity<Guid>
 {
-    protected readonly ApplicationDbContext _context;
-    protected readonly DbSet<TEntity> _dbSet;
+    private readonly ApplicationDbContext _context;
+    private readonly DbSet<TEntity> _dbSet;
 
     public Repository(ApplicationDbContext context)
     {
@@ -483,12 +701,15 @@ public class Repository<TEntity> : IRepository<TEntity> where TEntity : Entity<G
 
     public async Task<TEntity?> FindAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        return await _dbSet.FindAsync(id, cancellationToken);
+        return await _dbSet.FindAsync(new object[] { id }, cancellationToken);
     }
 
-    public async Task<IEnumerable<TEntity>> GetListAsync(
-        Expression<Func<TEntity, bool>> predicate, 
-        CancellationToken cancellationToken = default)
+    public async Task<TEntity?> GetFirstAsync(Expression<Func<TEntity, bool>> predicate, CancellationToken cancellationToken = default)
+    {
+        return await _dbSet.FirstOrDefaultAsync(predicate, cancellationToken);
+    }
+
+    public async Task<IEnumerable<TEntity>> GetListAsync(Expression<Func<TEntity, bool>> predicate, CancellationToken cancellationToken = default)
     {
         return await _dbSet.Where(predicate).ToListAsync(cancellationToken);
     }
@@ -541,10 +762,11 @@ API Search 功能用于自动扫描和检索项目中所有标记了 `[ApiSearch
 **使用示例**:
 ```csharp
 [HttpGet]
+[ActionName("GetAsync")]
 [ApiSearch(Name = "获取示例列表", Description = "返回示例数据列表", Category = "示例")]
-public IActionResult Get()
+public async Task<ApiRequestResult> GetAsync()
 {
-    return Ok(new { message = "示例控制器" });
+    return await yourService.GetAsync(); // Service method should return ApiRequestResult
 }
 ```
 
@@ -583,7 +805,7 @@ public class YourController : BaseApiController
 {
     [HttpGet]
     [ApiSearch(Name = "获取数据", Description = "获取用户数据列表", Category = "用户")]
-    public IActionResult GetData()
+	public async Task<ApiRequestResult> GetAsync()
     {
         // 业务逻辑
     }
@@ -659,25 +881,14 @@ public class UserDataController : BaseApiController
     }
 
     [HttpGet]
+    [ActionName("GetUserDataAsync")]
     [ApiSearch(Name = "获取用户数据", Category = "用户")]
-    public IActionResult GetUserData(Guid userId)
+    public async Task<ApiRequestResult> GetUserDataAsync(Guid userId)
     {
-        return Ok(_userDataService.GetUserData(userId));
+        return await _userDataService.GetUserDataAsync(userId);
     }
 }
 ```
-
-## 编码规范
-
-本项目所有文件均使用 **UTF-8 编码** 保存，包括但不限于：
-- Vue 组件文件（`.vue`）
-- TypeScript/JavaScript 文件（`.ts`, `.tsx`, `.js`, `.jsx`）
-- C# 文件（`.cs`）
-- 配置文件（`.json`, `.js`, `.ts`）
-- 样式文件（`.css`, `.scss`, `.less`）
-- 文档文件（`.md`）
-
-请在您的编辑器中设置 UTF-8 编码以确保正常显示中文内容。
 
 ## 注意事项
 
@@ -779,6 +990,8 @@ docs(readme): 更新项目说明文档
 ✅ 数据库迁移支持完成
 ✅ API Search 功能实现
 ✅ 示例代码已提供
+✅ Startup.cs 配置分离完成（提高可维护性）
+✅ 仓储接口依赖注入修复完成（解决Repository<T>接口注册问题）
 
 ### 前端（DDDVue）
 ✅ Vue 3 + TypeScript + Vite 项目搭建完成
@@ -977,40 +1190,267 @@ public async Task<ApiRequestResult> LoginAsync(LoginRequest request)
 3. **错误处理**: 解密失败时会返回原值，确保有适当的错误处理机制
 4. **性能考虑**: AES 加密解密性能良好，对用户体验无明显影响
 
-## 修复记录
+## Startup.cs 配置分离说明
+### 概述
+为提高项目可维护性，已将原本集中在`Program.cs`文件中的大量配置逻辑分离至独立的`Startup.cs`类中。这样使主程序文件更简洁，配置逻辑更集中易管理。
 
-### 2026-03-20 - 修复后端解密失败问题
+### 配置分离内容
+#### 1. Startup.cs 结构
+**文件位置**: `DDDProject.API/Startup.cs`
+- **构造函数**: 接收 IConfiguration 配置对象
+- **ConfigureServices(IServiceCollection services)**: 注册各种服务
+- **Configure(IApplicationBuilder app, IWebHostEnvironment env, ILogger<Program> logger)**: 配置HTTP请求管道
 
-**问题描述**: 后端无法正确解密前端加密的密码，导致登录失败。
+#### 2. 原 Program.cs 配置逻辑迁移
+- 服务注册逻辑（AddControllers, AddDbContext, JWT配置等）
+- 中间件配置（UseRouting, UseAuthentication, UseAuthorization等）
+- CORS配置
+- Swagger/Swashbuckle配置
+- 数据库迁移和种子数据初始化
 
-**问题原因**: 
-- 后端 `PasswordHelper.DecryptPassword` 方法在处理非 OpenSSL 格式的加密数据时，密钥和 IV 的长度处理不正确
-- CryptoJS 的 `AES.encrypt` 直接使用 `CryptoJS.enc.Utf8.parse()` 转换的字节数组
-- .NET 的 `Aes` 类需要精确匹配密钥和 IV 的长度，而原代码使用了错误的填充方式
+#### 3. 重构后 Program.cs 文件
+现在 Program.cs 只保留最小必需代码：
+```csharp
+var builder = WebApplication.CreateBuilder(args);
+var startup = new Startup(builder.Configuration);
 
-**修复内容**:
-- 修改了 `DDDProject.Domain/Helpers/PasswordHelper.cs` 中的 `DecryptPassword` 方法
-- **密钥**: 直接使用 UTF-8 字节（24 字节），不进行填充
-- **IV**: 截断到 16 字节（从 17 字节的字符串取前 16 字节）
+// 配置服务
+startup.ConfigureServices(builder.Services);
 
-**验证结果**:
-- 加密字符串 `Xd+XjJjHDusCva7dLEDJWQ==` 成功解密为 `12345`
-- SHA256 哈希匹配正确
+var app = builder.Build();
 
-**修改文件**:
-- `DDDProject.Domain/Helpers/PasswordHelper.cs`
+// 配置应用管道
+startup.Configure(app, app.Environment, app.Services.GetRequiredService<ILogger<Program>>());
 
-**测试方法**:
-```bash
-# 重新构建后端
-cd DDDProject
-dotnet build DDDProject.slnx
-
-# 重新启动后端服务
-dotnet run --project DDDProject.API
+app.Run();
 ```
 
-**相关文件**:
-- 前端加密: `DDDVue/src/utils/crypto.ts`
-- 登录服务: `DDDProject.Application/Services/LoginService.cs`
-- 密码帮助类: `DDDProject.Domain/Helpers/PasswordHelper.cs`
+### 仓储接口注册修复
+为解决依赖注入错误，对仓储接口注册进行了完善：
+
+#### 1. Repository 实现补充
+- **文件位置**: `DDDProject.Infrastructure.Repositories.RepositorySimple.cs`
+- 添加了针对使用 Guid 作为主键的实体的 `IRepository<T>` 接口实现
+- 原有的 `IRepository<T,TId>` 接口实现在 `Repository.cs` 中
+
+#### 2. 服务注册完善
+**文件位置**: `DDDProject.Infrastructure.ServiceCollectionExtensions.cs`
+```csharp
+public static IServiceCollection AddRepositories(this IServiceCollection services)
+{
+    services.AddScoped(typeof(IRepository<,>), typeof(Infrastructure.Repositories.Repository<,>));
+    services.AddScoped(typeof(IRepository<>), typeof(Infrastructure.Repositories.Repository<>));
+    
+    // 注册时间服务
+    services.AddScoped<ITimeService, ChinaStandardTimeService>();
+    
+    return services;
+}
+```
+
+### 优势
+1. **更好的组织性**: 将服务配置和中间件配置逻辑分别封装到Startup类的不同方法中
+2. **可维护性**: 使得配置代码更易于定位和修改
+3. **遵循传统模式**: 使项目结构更接近传统的.NET Core启动配置模式
+4. **解决依赖注入问题**: 确保应用服务（如 MenuService、RoleService）能正确解析仓储依赖
+
+## JWT认证配置说明
+
+### 概述
+本项目使用JWT（JSON Web Token）作为身份验证机制，确保API的安全访问。JWT令牌通过HTTP Authorization头部携带，使用Bearer方案进行传输。
+
+### 配置参数
+
+#### 1. JWT设置
+**文件位置**: `DDDProject/DDLProject.API/appsettings.json`
+
+```json
+{
+  "JwtSettings": {
+    "Issuer": "DDDProject",
+    "Audience": "DDDProject", 
+    "Key": "YourSuperSecretAndLongEnoughKeyForSecureToken12345678901234567890123",
+    "ExpireMinutes": 720
+  }
+}
+```
+
+**配置说明**:
+- `Issuer`: JWT签发者，标识令牌来源
+- `Audience`: JWT接收方，标识令牌目标
+- `Key`: JWT签名密钥，必须足够长且保密
+- `ExpireMinutes`: 令牌有效时间（分钟）
+
+#### 2. 启动配置
+**文件位置**: `DDDProject/DDLProject.API/Program.cs`
+
+- 自动注册JWT认证中间件
+- 配置TokenValidationParameters参数
+- 设置HttpContextAccessor服务以获取当前用户信息
+
+### 使用方式
+
+#### 1. 认证流程
+1. 用户通过登录接口获取JWT令牌
+2. 客户端在后续请求的Authorization头部携带Bearer令牌
+3. 服务端验证令牌的有效性和完整性
+4. 成功验证后提供受保护的资源
+
+#### 2. 受保护的控制器
+所有需要身份验证的控制器需使用`[Authorize]`特性：
+
+```csharp
+[ApiController]
+[Route("api/[controller]/[action]")]
+[Authorize] // 需要身份验证
+public class MenuController : BaseApiController
+{
+    // 需要身份验证的方法
+}
+```
+
+### 当前用户信息获取
+
+#### 1. CurrentUser服务
+**文件位置**: `DDDProject.API/Extensions/CurrentUser.cs`
+
+实现了获取当前登录用户信息的全局类：
+
+- `UserId`: 获取当前用户的ID
+- `UserName`: 获取当前用户的用户名  
+- `RealName`: 获取当前用户的真实姓名
+- `IsAuthenticated`: 判断用户是否已认证
+
+#### 2. 依赖注入配置
+在`Program.cs`中已注册CurrentUser服务：
+
+```csharp
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<CurrentUser>();
+```
+
+#### 3. 在控制器中使用
+```csharp
+public class MenuController : BaseApiController
+{
+    private readonly CurrentUser _currentUser;
+
+    public MenuController(IMenuService menuService, CurrentUser currentUser)
+    {
+        _menuService = menuService;
+        _currentUser = currentUser;
+    }
+    
+    [HttpGet]
+    public async Task<ApiRequestResult> GetUserSpecificDataAsync()
+    {
+        var userId = _currentUser.UserId;
+        var userName = _currentUser.UserName;
+        // 使用当前用户信息进行业务处理
+    }
+}
+```
+
+### 安全性说明
+
+1. **令牌存储**: JWT令牌存储在客户端，无需服务器维护会话状态
+2. **密钥安全**: 签名密钥必须保密，生产环境中应从安全配置源获取
+3. **过期时间**: 设置合理的过期时间平衡安全性和用户体验
+4. **HTTPS传输**: 生产环境中必须通过HTTPS传输以防止中间人攻击
+5. **令牌验证**: 每次访问受保护资源时都验证令牌的完整性和有效性
+
+### 生产环境建议
+
+1. **密钥轮换**: 定期更换JWT签名密钥
+2. **过期策略**: 设置较短的访问令牌过期时间和较长的刷新令牌有效期
+3. **审计日志**: 记录JWT验证失败的尝试
+4. **CORS安全**: 限制允许的源和方法
+5. **黑名单管理**: 对注销用户的令牌进行黑名单管理
+
+### 令牌组成结构
+- **Header**: 包含算法信息和令牌类型
+- **Payload**: 包含声明信息（Subject、Name、GivenName等）
+- **Signature**: 使用密钥对header和payload进行签名
+
+## 时区设置说明
+
+### 中国标准时间（UTC+8）
+
+本项目所有时间相关操作都使用**中国标准时间**（CST，UTC+8）以确保时间显示的一致性。
+
+### 实现方式
+
+1. **后端配置**：
+   - 实体创建时间使用 `DateTime.Now` 替代 `DateTime.UtcNow`
+   - 数据库存储使用服务器本地时间（配置为CST）
+   - 时间服务统一处理中国标准时间
+
+2. **数据库配置**：
+   - 通过 `GETDATE()` 函数使用服务器本地时间
+   - 不使用 UTC 时间函数
+
+3. **部署要求**：
+   - 生产服务器应设置时区为 **(UTC+08:00) Beijing, Chongqing, Hong Kong, Urumqi**
+   - Docker 容器应设置 `Asia/Shanghai` 时区
+
+### 时间服务（ITimeService）
+
+项目中引入了时间服务来统一处理时区：
+
+```csharp
+public interface ITimeService
+{
+    DateTime GetCurrentTime();
+    DateTimeOffset GetCurrentOffsetTime();
+}
+
+public class ChinaStandardTimeService : ITimeService
+{
+    private static readonly TimeZoneInfo ChinaTimeZone = 
+        TimeZoneInfo.FindSystemTimeZoneById("China Standard Time") ?? 
+        TimeZoneInfo.Local;
+    
+    public DateTime GetCurrentTime()
+    {
+        return TimeZoneInfo.ConvertTime(DateTime.UtcNow, ChinaTimeZone).DateTime;
+    }
+    
+    public DateTimeOffset GetCurrentOffsetTime()
+    {
+        return TimeZoneInfo.ConvertTime(DateTimeOffset.UtcNow, ChinaTimeZone);
+    }
+}
+```
+
+### 部署配置
+
+#### Windows 服务器
+```cmd
+# 设置系统时区为北京时间
+tzutil /s "China Standard Time"
+```
+
+#### Linux 服务器（Docker环境）
+```bash
+# 设置时区为上海
+sudo timedatectl set-timezone Asia/Shanghai
+```
+
+#### Dockerfile 时区配置
+```dockerfile
+# Ubuntu/Debian
+RUN ln -sf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime
+RUN dpkg-reconfigure -f noninteractive tzdata
+
+# 或者设置环境变量
+ENV TZ=Asia/Shanghai
+RUN echo $TZ > /etc/timezone
+```
+
+### 注意事项
+
+1. **数据库服务器时间**：确保数据库服务器时间设置为CST
+2. **应用程序服务器时间**：确保应用服务器时间设置为CST 
+3. **客户端时间**：前端使用的时间戳基于服务端时间，保证一致性
+4. **日志记录**：所有日志时间均记录为CST时间
+5. **用户界面**：所有显示时间都来自服务端，确保统一性
