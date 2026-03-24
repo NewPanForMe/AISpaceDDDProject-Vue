@@ -1,16 +1,18 @@
+using DDDProject.Domain.Models;
+using DDDProject.API.Extensions;
+using DDDProject.API.Middlewares;
 using DDDProject.Application.Interfaces;
 using DDDProject.Infrastructure;
 using DDDProject.Infrastructure.Contexts;
 using DDDProject.Infrastructure.Seed;
-using DDDProject.API.Extensions;
-using DDDProject.API.Middlewares;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using Scalar.AspNetCore;
 using System.Text;
-using Microsoft.AspNetCore.Routing;
-using DDDProject.Domain.Repositories;
-using DDDProject.Application.Services;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.OpenApi;
+using Microsoft.AspNetCore.OpenApi;
 
 namespace DDDProject.API
 {
@@ -39,7 +41,12 @@ namespace DDDProject.API
             // 添加服务到容器
             services.AddControllers();
             services.AddEndpointsApiExplorer();
-            services.AddSwaggerGen();
+
+            // 配置
+            services.AddOpenApi(options =>
+             {
+                 options.AddDocumentTransformer<BearerSecuritySchemeTransformer>();
+             });
 
             // 添加配置绑定
             services.Configure<JwtSettings>(Configuration.GetSection("JwtSettings"));
@@ -88,15 +95,6 @@ namespace DDDProject.API
 
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env, ILogger<Program> logger)
         {
-            // 应用 HTTP 请求管道配置
-            if (env.IsDevelopment())
-            {
-                app.UseSwagger();
-                app.UseSwaggerUI(c =>
-                {
-                    c.SwaggerEndpoint("/swagger/v1/swagger.json", "DDDProject API V1");
-                });
-            }
 
             // 应用数据库迁移并初始化数据
             using (var scope = app.ApplicationServices.CreateScope())
@@ -127,21 +125,59 @@ namespace DDDProject.API
             //app.UseHttpsRedirection();
 
             app.UseCors("AllowAll");
-
-            // 添加自定义权限检查中间件
-            app.UseMiddleware<PermissionCheckMiddleware>();
-
             app.UseRouting(); // 添加路由中间件
-            
+
             // 必须在 UseRouting 之后，但在 UseEndpoints 之前使用认证中间件
             app.UseAuthentication();
             app.UseAuthorization();
+
+            // 添加自定义权限检查中间件
+            // 必须在 UseRouting 之后（以便获取 endpoint 信息），在 UseAuthorization 之后（以便认证完成）
+            app.UseMiddleware<PermissionCheckMiddleware>();
 
             app.UseEndpoints(endpoints =>
             {
                 endpoints.MapControllers();
                 endpoints.MapGet("/", () => "Hello World");
+                endpoints.MapScalarApiReference(options =>
+                {
+                    options.Layout = ScalarLayout.Modern;
+                    options.WithTitle("My API Documentation");
+                    options.Authentication = new ScalarAuthenticationOptions()
+                    {
+                        PreferredSecuritySchemes = new List<string>() { "Bearer" }
+                    };
+                });
+                endpoints.MapOpenApi();
+
             });
         }
+
+        internal sealed class BearerSecuritySchemeTransformer(IAuthenticationSchemeProvider authenticationSchemeProvider) : IOpenApiDocumentTransformer
+        {
+            public async Task TransformAsync(OpenApiDocument document, OpenApiDocumentTransformerContext context, CancellationToken cancellationToken)
+            {
+                var authenticationSchemes = await authenticationSchemeProvider.GetAllSchemesAsync();
+                if (authenticationSchemes.Any(authScheme => authScheme.Name == "Bearer"))
+                {
+                    // Add the security scheme at the document level
+                    var requirements = new Dictionary<string, IOpenApiSecurityScheme>
+                    {
+                        ["Bearer"] = new OpenApiSecurityScheme
+                        {
+                            Type = SecuritySchemeType.Http,
+                            Scheme = "bearer", // "bearer" refers to the header name here
+                            In = ParameterLocation.Header,
+                            BearerFormat = "Json Web Token"
+                        }
+                    };
+                    document.Components ??= new OpenApiComponents();
+                    document.Components.SecuritySchemes = requirements;
+
+
+                }
+            }
+        }
     }
+
 }

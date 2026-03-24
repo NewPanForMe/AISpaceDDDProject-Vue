@@ -38,6 +38,23 @@ public class Repository<TEntity> : IRepository<TEntity> where TEntity : Entity<G
         return await _dbSet.Where(predicate).ToListAsync(cancellationToken);
     }
 
+    public async Task<IEnumerable<TEntity>> GetListAsync(
+        Expression<Func<TEntity, bool>> predicate,
+        Func<IOrderedQueryable<TEntity>, IOrderedQueryable<TEntity>> orderBy,
+        int skip,
+        int take,
+        CancellationToken cancellationToken = default)
+    {
+        var query = _dbSet.Where(predicate);
+        var orderedQuery = orderBy(query.OrderBy(x => x.Id));
+        return await orderedQuery.Skip(skip).Take(take).ToListAsync(cancellationToken);
+    }
+
+    public async Task<int> CountAsync(Expression<Func<TEntity, bool>> predicate, CancellationToken cancellationToken = default)
+    {
+        return await _dbSet.CountAsync(predicate, cancellationToken);
+    }
+
     public async Task AddAsync(TEntity entity, CancellationToken cancellationToken = default)
     {
         await _dbSet.AddAsync(entity, cancellationToken);

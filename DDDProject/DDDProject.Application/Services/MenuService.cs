@@ -18,13 +18,26 @@ public class MenuService : IMenuService
     }
 
     /// <summary>
-    /// 获取菜单列表
+    /// 获取菜单列表（分页）
     /// </summary>
-    public async Task<ApiRequestResult> GetMenusAsync()
+    public async Task<ApiRequestResult> GetMenusAsync(PagedRequest request)
     {
         try
         {
-            var menus = await _menuRepository.GetListAsync(m => true);
+            // 计算跳过的记录数
+            var skipCount = (request.PageNumber - 1) * request.PageSize;
+
+            // 获取总记录数
+            var total = await _menuRepository.CountAsync(m => true);
+
+            // 获取当前页的数据
+            var menus = await _menuRepository.GetListAsync(
+                m => true,
+                q => q.OrderBy(m => m.SortOrder),
+                skipCount,
+                request.PageSize
+            );
+
             var menuDtos = menus.Select(m => new MenuDto
             {
                 Id = m.Id,
@@ -37,11 +50,19 @@ public class MenuService : IMenuService
                 Status = m.Status
             }).ToList();
 
+            var pagedResult = new PagedResult<MenuDto>
+            {
+                List = menuDtos.OrderBy(m => m.SortOrder).ToList(),
+                Total = total,
+                PageNumber = request.PageNumber,
+                PageSize = request.PageSize
+            };
+
             return new ApiRequestResult
             {
                 Success = true,
                 Message = "操作成功",
-                Data = menuDtos.OrderBy(m => m.SortOrder)
+                Data = pagedResult
             };
         }
         catch (Exception ex)
@@ -63,7 +84,7 @@ public class MenuService : IMenuService
         try
         {
             var menu = await _menuRepository.FindAsync(id);
-            
+
             if (menu == null)
             {
                 return new ApiRequestResult
@@ -105,26 +126,20 @@ public class MenuService : IMenuService
     }
 
     /// <summary>
-    /// 获取树形结构的菜单
+    /// 获取树形结构的菜单（用于侧边栏菜单，无需分页）
     /// </summary>
-    public async Task<ApiRequestResult> GetTreeMenusAsync()
+    public async Task<ApiRequestResult> GetSidebarMenusAsync()
     {
         try
         {
             var menus = await _menuRepository.GetListAsync(m => true);
-            var menuList = menus.ToList();
-            
-            var rootMenus = menuList.Where(m => m.ParentId == null || m.ParentId == Guid.Empty)
-                                   .OrderBy(m => m.SortOrder)
-                                   .ToList();
-
-            var treeMenus = BuildTreeMenu(rootMenus, menuList);
+            var menuDtos = BuildTreeMenu(menus.ToList());
 
             return new ApiRequestResult
             {
                 Success = true,
                 Message = "操作成功",
-                Data = treeMenus
+                Data = menuDtos
             };
         }
         catch (Exception ex)
@@ -132,7 +147,7 @@ public class MenuService : IMenuService
             return new ApiRequestResult
             {
                 Success = false,
-                Message = $"获取树形菜单失败: {ex.Message}",
+                Message = $"获取侧边栏菜单失败: {ex.Message}",
                 Data = null
             };
         }
@@ -148,19 +163,13 @@ public class MenuService : IMenuService
             // 这里可以根据用户ID获取用户的菜单权限
             // 暂时返回所有启用的菜单，实际项目中应当实现基于用户角色或权限的过滤
             var menus = await _menuRepository.GetListAsync(m => m.Status == 1); // 只获取启用的菜单
-            var menuList = menus.ToList();
-            
-            var rootMenus = menuList.Where(m => m.ParentId == null || m.ParentId == Guid.Empty)
-                                   .OrderBy(m => m.SortOrder)
-                                   .ToList();
-
-            var treeMenus = BuildTreeMenu(rootMenus, menuList);
+            var menuDtos = BuildTreeMenu(menus.ToList());
 
             return new ApiRequestResult
             {
                 Success = true,
                 Message = "操作成功",
-                Data = treeMenus
+                Data = menuDtos
             };
         }
         catch (Exception ex)
@@ -169,6 +178,61 @@ public class MenuService : IMenuService
             {
                 Success = false,
                 Message = $"获取用户菜单树失败: {ex.Message}",
+                Data = null
+            };
+        }
+    }
+
+    /// <summary>
+    /// 获取分页的树形菜单数据（用于大数据量场景）
+    /// </summary>
+    public async Task<ApiRequestResult> GetPagedTreeMenusAsync(PagedRequest request)
+    {
+        try
+        {
+            var allMenus = new List<Menu>();
+            var currentPage = request.PageNumber;
+
+            // 循环分页获取所有数据
+            while (true)
+            {
+                var menus = await _menuRepository.GetListAsync(
+                    m => true,
+                    q => q.OrderBy(x => x.SortOrder),
+                    (currentPage - 1) * request.PageSize,
+                    request.PageSize
+                );
+
+                if (!menus.Any()) break;
+
+                allMenus.AddRange(menus);
+
+                if (menus.Count() < request.PageSize) break;
+                currentPage++;
+            }
+
+            // 构建树形结构
+            var menuDtos = BuildTreeMenu(allMenus);
+
+            return new ApiRequestResult
+            {
+                Success = true,
+                Message = "操作成功",
+                Data = new
+                {
+                    List = menuDtos,
+                    Total = allMenus.Count,
+                    PageNumber = request.PageNumber,
+                    PageSize = request.PageSize
+                }
+            };
+        }
+        catch (Exception ex)
+        {
+            return new ApiRequestResult
+            {
+                Success = false,
+                Message = $"获取分页树形菜单失败: {ex.Message}",
                 Data = null
             };
         }
@@ -253,11 +317,11 @@ public class MenuService : IMenuService
             }
 
             // 验证菜单名称是否已被其他菜单使用
-            var otherMenu = await _menuRepository.GetFirstAsync(m => 
-                m.Name == menuDto.Name && 
-                m.Id != menuDto.Id.Value && 
+            var otherMenu = await _menuRepository.GetFirstAsync(m =>
+                m.Name == menuDto.Name &&
+                m.Id != menuDto.Id.Value &&
                 m.ParentId == menuDto.ParentId);
-            
+
             if (otherMenu != null)
             {
                 return new ApiRequestResult
@@ -442,36 +506,66 @@ public class MenuService : IMenuService
     }
 
     /// <summary>
+    /// 构建扁平菜单列表（用于单层路由）
+    /// </summary>
+    private List<MenuDto> BuildFlatMenu(List<Menu> allMenus)
+    {
+        // 获取所有菜单并排序
+        var menuDtos = allMenus.OrderBy(m => m.SortOrder).Select(m => new MenuDto
+        {
+            Id = m.Id,
+            Name = m.Name,
+            Path = m.Path,
+            Component = m.Component,
+            Icon = m.Icon,
+            ParentId = m.ParentId,
+            SortOrder = m.SortOrder,
+            Status = m.Status,
+            Children = null  // 扁平结构，不包含子菜单
+        }).ToList();
+
+        return menuDtos;
+    }
+
+    /// <summary>
     /// 构建树形菜单结构
     /// </summary>
-    private List<MenuDto> BuildTreeMenu(List<Menu> rootMenus, List<Menu> allMenus)
+    private List<MenuDto> BuildTreeMenu(List<Menu> allMenus)
     {
+        // 获取根节点
+        var rootMenus = allMenus.Where(m => m.ParentId == null || m.ParentId == Guid.Empty)
+                               .OrderBy(m => m.SortOrder)
+                               .ToList();
+
         var result = new List<MenuDto>();
-        
+
         foreach (var menu in rootMenus)
         {
-            var menuDto = new MenuDto
-            {
-                Id = menu.Id,
-                Name = menu.Name,
-                Path = menu.Path,
-                Component = menu.Component,
-                Icon = menu.Icon,
-                ParentId = menu.ParentId,
-                SortOrder = menu.SortOrder,
-                Status = menu.Status,
-                Children = new List<MenuDto>()
-            };
-
-            var children = allMenus.Where(m => m.ParentId == menu.Id).OrderBy(m => m.SortOrder).ToList();
-            if (children.Any())
-            {
-                menuDto.Children = BuildTreeMenu(children, allMenus);
-            }
-
+            var menuDto = BuildMenuDto(menu, allMenus);
             result.Add(menuDto);
         }
 
         return result;
+    }
+
+    /// <summary>
+    /// 递归构建菜单 DTO
+    /// </summary>
+    private MenuDto BuildMenuDto(Menu menu, List<Menu> allMenus)
+    {
+        var children = allMenus.Where(m => m.ParentId == menu.Id).OrderBy(m => m.SortOrder).ToList();
+
+        return new MenuDto
+        {
+            Id = menu.Id,
+            Name = menu.Name,
+            Path = menu.Path,
+            Component = menu.Component,
+            Icon = menu.Icon,
+            ParentId = menu.ParentId,
+            SortOrder = menu.SortOrder,
+            Status = menu.Status,
+            Children = children.Any() ? children.Select(m => BuildMenuDto(m, allMenus)).ToList() : new List<MenuDto>()
+        };
     }
 }

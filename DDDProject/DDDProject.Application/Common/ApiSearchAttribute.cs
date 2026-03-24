@@ -21,7 +21,7 @@ public class ApiSearchAttribute : Attribute
     /// <summary>
     /// API分类
     /// </summary>
-    public string Category { get; set; }
+    public ApiSearchCategory Category { get; set; }
 
     /// <summary>
     /// 构造函数
@@ -30,7 +30,7 @@ public class ApiSearchAttribute : Attribute
     {
         Name = "";
         Description = "";
-        Category = "";
+        Category = ApiSearchCategory.Other;
     }
 
     /// <summary>
@@ -39,7 +39,7 @@ public class ApiSearchAttribute : Attribute
     /// <param name="name">API名称</param>
     /// <param name="description">API描述</param>
     /// <param name="category">API分类</param>
-    public ApiSearchAttribute(string name, string description = "", string category = "")
+    public ApiSearchAttribute(string name, string description = "", ApiSearchCategory category = ApiSearchCategory.Other)
     {
         Name = name;
         Description = description;

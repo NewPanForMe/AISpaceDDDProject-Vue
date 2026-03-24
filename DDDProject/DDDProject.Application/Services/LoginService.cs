@@ -2,8 +2,10 @@ using DDDProject.Application.DTOs;
 using DDDProject.Application.Interfaces;
 using DDDProject.Domain.Entities;
 using DDDProject.Domain.Helpers;
+using DDDProject.Domain.Models;
 using DDDProject.Domain.Repositories;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using System;
 using System.Collections.Generic;
@@ -21,14 +23,17 @@ namespace DDDProject.Application.Services;
 public class LoginService : ILoginService
 {
     private readonly IRepository<User, Guid> _userRepository;
+    private readonly JwtSettings _jwtSettings;
 
     /// <summary>
     /// 构造函数
     /// </summary>
     /// <param name="userRepository">用户仓储</param>
-    public LoginService(IRepository<User, Guid> userRepository)
+    /// <param name="jwtSettings">JWT配置选项</param>
+    public LoginService(IRepository<User, Guid> userRepository, IOptions<JwtSettings> jwtSettings)
     {
         _userRepository = userRepository;
+        _jwtSettings = jwtSettings.Value;
     }
 
     /// <summary>
@@ -111,7 +116,6 @@ public class LoginService : ILoginService
             new Claim(JwtRegisteredClaimNames.UniqueName, user.UserName),
             new Claim(JwtRegisteredClaimNames.Name, user.UserName),
             new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
-            new Claim(ClaimTypes.Name, user.UserName)
         };
 
         // 如果有真实姓名，添加到 Claim
@@ -120,13 +124,8 @@ public class LoginService : ILoginService
             claims.Add(new Claim(ClaimTypes.GivenName, user.RealName));
         }
 
-        // 从配置读取 JWT 设置（这里使用硬编码，实际应从配置文件读取）
-        var jwtSettings = new
-        {
-            Issuer = "DDDProject",
-            Audience = "DDDProject",
-            Key = "YourSuperSecretKey12345678901234567890" // 32字节以上
-        };
+        // 从配置读取 JWT 设置
+        var jwtSettings = _jwtSettings;
 
         // 创建签名密钥
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings.Key));
@@ -137,7 +136,7 @@ public class LoginService : ILoginService
             issuer: jwtSettings.Issuer,
             audience: jwtSettings.Audience,
             claims: claims,
-            expires: DateTime.UtcNow.AddHours(12),
+            expires: DateTime.UtcNow.AddMinutes(jwtSettings.ExpireMinutes),
             signingCredentials: credentials
         );
 

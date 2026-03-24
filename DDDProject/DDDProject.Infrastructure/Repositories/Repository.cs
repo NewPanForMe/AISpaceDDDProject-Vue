@@ -59,4 +59,62 @@ public class Repository<TEntity, TId> : IRepository<TEntity, TId>
     {
         return await _dbSet.Where(predicate).ToListAsync(cancellationToken);
     }
+
+    public IQueryable<TEntity> GetAll(Expression<Func<TEntity, bool>> predicate = null, 
+        Func<IQueryable<TEntity>, IQueryable<TEntity>> orderBy = null,
+        params Expression<Func<TEntity, object>>[] includeProperties)
+    {
+        var query = _dbSet.AsQueryable();
+        
+        if (predicate != null)
+        {
+            query = query.Where(predicate);
+        }
+        
+        if (includeProperties != null && includeProperties.Length > 0)
+        {
+            foreach (var includeProperty in includeProperties)
+            {
+                query = query.Include(includeProperty);
+            }
+        }
+        
+        if (orderBy != null)
+        {
+            query = orderBy(query);
+        }
+        
+        return query;
+    }
+
+    public async Task<TEntity> GetAsync(Expression<Func<TEntity, bool>> predicate, CancellationToken cancellationToken = default)
+    {
+        return await _dbSet.FirstOrDefaultAsync(predicate, cancellationToken);
+    }
+
+    public async Task<List<TEntity>> GetListAsync(Expression<Func<TEntity, bool>> predicate, 
+        Func<IQueryable<TEntity>, IQueryable<TEntity>> orderBy,
+        int skip,
+        int take,
+        CancellationToken cancellationToken = default)
+    {
+        var query = _dbSet.AsQueryable();
+        
+        if (predicate != null)
+        {
+            query = query.Where(predicate);
+        }
+        
+        var orderedQuery = orderBy(query);
+        return await orderedQuery.Skip(skip).Take(take).ToListAsync(cancellationToken);
+    }
+
+    public async Task<int> CountAsync(Expression<Func<TEntity, bool>> predicate = null, CancellationToken cancellationToken = default)
+    {
+        if (predicate == null)
+        {
+            return await _dbSet.CountAsync(cancellationToken);
+        }
+        return await _dbSet.CountAsync(predicate, cancellationToken);
+    }
 }

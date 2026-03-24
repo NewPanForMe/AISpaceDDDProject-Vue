@@ -25,6 +25,27 @@ public interface IRepository<TEntity> where TEntity : Entity<Guid>
     Task<IEnumerable<TEntity>> GetListAsync(Expression<Func<TEntity, bool>> predicate, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// 根据条件获取实体列表（支持排序和分页）
+    /// </summary>
+    /// <param name="predicate">条件表达式</param>
+    /// <param name="orderBy">排序表达式</param>
+    /// <param name="skip">跳过的记录数</param>
+    /// <param name="take">获取的记录数</param>
+    /// <param name="cancellationToken">取消令牌</param>
+    /// <returns>实体列表</returns>
+    Task<IEnumerable<TEntity>> GetListAsync(
+        Expression<Func<TEntity, bool>> predicate,
+        Func<IOrderedQueryable<TEntity>, IOrderedQueryable<TEntity>> orderBy,
+        int skip,
+        int take,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// 根据条件获取实体数量
+    /// </summary>
+    Task<int> CountAsync(Expression<Func<TEntity, bool>> predicate, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// 添加实体
     /// </summary>
     Task AddAsync(TEntity entity, CancellationToken cancellationToken = default);

@@ -44,7 +44,8 @@ public class ApiSearchService : IApiSearchService
     {
         var apiList = GetApiSearchAttributes()
             .Where(x => string.IsNullOrEmpty(category) ||
-                   (x.Category != null && x.Category.Contains(category, StringComparison.OrdinalIgnoreCase)))
+                   (x.Category != null && x.Category.Contains(category, StringComparison.OrdinalIgnoreCase)) ||
+                   Enum.TryParse<ApiSearchCategory>(category, true, out var enumValue) && x.Category == enumValue.ToString())
             .ToList();
         return JsonSerializer.Serialize(apiList, new JsonSerializerOptions { WriteIndented = true });
     }
@@ -131,7 +132,8 @@ public class ApiSearchService : IApiSearchService
                     ActionName = method.Name,
                     Name = apiSearchAttr.Name,
                     Description = apiSearchAttr.Description,
-                    Category = apiSearchAttr.Category,
+                    Category = apiSearchAttr.Category.ToString(),
+                    CategoryEnum = apiSearchAttr.Category,
                     HttpMethod = httpMethod,
                     Path = fullPath
                 });
@@ -230,6 +232,11 @@ public class ApiSearchInfo
     /// API分类
     /// </summary>
     public string Category { get; set; } = string.Empty;
+
+    /// <summary>
+    /// API分类枚举
+    /// </summary>
+    public ApiSearchCategory CategoryEnum { get; set; }
 
     /// <summary>
     /// HTTP方法

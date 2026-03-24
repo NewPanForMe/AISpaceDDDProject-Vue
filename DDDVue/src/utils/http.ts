@@ -1,5 +1,6 @@
 import axios from "axios";
 import { showNotification, showErrorNotification } from "./notification";
+import router from "@/router";
 
 // 创建 axios 实例
 const service = axios.create({
@@ -29,11 +30,33 @@ service.interceptors.request.use(
   },
 );
 
+// 递归转换对象属性名为 camelCase
+const toCamelCase = (str: string): string => {
+  return str.replace(/_([a-z])/g, (match, letter) => letter.toUpperCase())
+}
+
+const convertToCamelCase = (obj: any): any => {
+  if (Array.isArray(obj)) {
+    return obj.map(item => convertToCamelCase(item))
+  } else if (obj !== null && typeof obj === 'object') {
+    const converted: any = {}
+    for (const key in obj) {
+      if (Object.prototype.hasOwnProperty.call(obj, key)) {
+        const camelKey = key === 'Children' ? 'children' : key
+        converted[camelKey] = convertToCamelCase(obj[key])
+      }
+    }
+    return converted
+  }
+  return obj
+}
+
 // 响应拦截器
 service.interceptors.response.use(
   (response) => {
-    // 直接返回 response.data，使类型推断正确
-    return response.data;
+    // 转换后端返回的 PascalCase 属性名为 camelCase
+    const data = convertToCamelCase(response.data)
+    return data
   },
   (error) => {
     let title = "请求失败";
@@ -46,9 +69,14 @@ service.interceptors.response.use(
       switch (status) {
         case 401:
           localStorage.removeItem("token");
+          localStorage.removeItem("userInfo");
           title = "未授权";
           message = "登录已过期或未登录，请重新登录";
           type = "warning";
+          // 延迟跳转，让用户看到提示信息
+          setTimeout(() => {
+            router.push('/');
+          }, 1500);
           break;
         case 403:
           title = "禁止访问";

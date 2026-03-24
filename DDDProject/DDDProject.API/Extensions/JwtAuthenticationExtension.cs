@@ -1,5 +1,7 @@
+using DDDProject.Domain.Models;
 using DDDProject.API.Extensions;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 
@@ -14,18 +16,13 @@ namespace Microsoft.Extensions.DependencyInjection
         /// 添加JWT认证服务
         /// </summary>
         /// <param name="services"></param>
+        /// <param name="configuration"></param>
         /// <returns></returns>
-        public static IServiceCollection AddJwtAuthentication(this IServiceCollection services)
+        public static IServiceCollection AddJwtAuthentication(this IServiceCollection services, IConfiguration configuration)
         {
-            var jwtSettings = new JwtSettings();
-            services.Configure<JwtSettings>(options =>
-            {
-                options.Issuer = jwtSettings.Issuer;
-                options.Audience = jwtSettings.Audience;
-                options.Key = jwtSettings.Key;
-                options.ExpireMinutes = jwtSettings.ExpireMinutes;
-            });
+            services.Configure<JwtSettings>(configuration.GetSection("JwtSettings"));
 
+            var jwtSettings = configuration.GetSection("JwtSettings").Get<JwtSettings>();
             services.AddAuthentication(authen =>
             {
                 authen.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
@@ -39,18 +36,18 @@ namespace Microsoft.Extensions.DependencyInjection
                 bearer.TokenValidationParameters = new TokenValidationParameters
                 {
                     ValidateIssuerSigningKey = true,
-                    IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(Environment.GetEnvironmentVariable("JWT_KEY") ?? "YourSuperSecretKey12345678901234567890")),
+                    IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings.Key)),
                     ValidateIssuer = true,
-                    ValidIssuer = Environment.GetEnvironmentVariable("JWT_ISSUER") ?? "DDDProject",
+                    ValidIssuer = jwtSettings.Issuer,
                     ValidateAudience = true,
-                    ValidAudience = Environment.GetEnvironmentVariable("JWT_AUDIENCE") ?? "DDDProject",
+                    ValidAudience = jwtSettings.Audience,
                     ValidateLifetime = true,
                     ClockSkew = TimeSpan.Zero
                 };
             });
 
             services.AddScoped<CurrentUser>();
-            
+
             return services;
         }
     }

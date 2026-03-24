@@ -90,7 +90,7 @@ const handleSubmit = async () => {
     })
 
     // 调用登录接口
-    const response = await http.post<LoginResponse>(api.Login.Login, {
+    const response = await http.post<LoginResponse>(api.Login.LoginAsync, {
       userName: form.value.userName,
       password: aesEncrypt(form.value.password)
     })
