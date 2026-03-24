@@ -1,4 +1,5 @@
 using DDDProject.Application.DTOs;
+using DDDProject.Domain.Models;
 
 namespace DDDProject.Application.Interfaces;
 
@@ -7,30 +8,18 @@ namespace DDDProject.Application.Interfaces;
 /// </summary>
 public interface IMenuService : IApplicationService
 {
-    /// <summary>
-    /// 获取菜单列表（分页）
-    /// </summary>
-    Task<ApiRequestResult> GetMenusAsync(PagedRequest request);
 
-    /// <summary>
-    /// 获取菜单详情
-    /// </summary>
-    Task<ApiRequestResult> GetMenuByIdAsync(Guid id);
 
     /// <summary>
     /// 获取树形结构的菜单（用于侧边栏菜单，无需分页）
     /// </summary>
     Task<ApiRequestResult> GetSidebarMenusAsync();
 
-    /// <summary>
-    /// 获取分页的树形菜单数据（用于大数据量场景）
-    /// </summary>
-    Task<ApiRequestResult> GetPagedTreeMenusAsync(PagedRequest request);
 
     /// <summary>
-    /// 根据用户获取菜单树形结构
+    /// 获取路由配置（用于前端动态路由）
     /// </summary>
-    Task<ApiRequestResult> GetUserMenuTreeAsync(Guid userId);
+    Task<ApiRequestResult> GetRoutesAsync();
 
     /// <summary>
     /// 创建菜单

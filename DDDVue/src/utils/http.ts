@@ -1,6 +1,7 @@
 import axios from "axios";
 import { showNotification, showErrorNotification } from "./notification";
 import router from "@/router";
+import { getItem, removeItem, StorageKeys } from "@/utils/storage";
 
 // 创建 axios 实例
 const service = axios.create({
@@ -14,7 +15,7 @@ const service = axios.create({
 // 请求拦截器
 service.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem("token");
+    const token = getItem<string>(StorageKeys.Token);
     if (token && config.headers) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -68,8 +69,8 @@ service.interceptors.response.use(
 
       switch (status) {
         case 401:
-          localStorage.removeItem("token");
-          localStorage.removeItem("userInfo");
+          removeItem(StorageKeys.Token);
+          removeItem(StorageKeys.UserInfo);
           title = "未授权";
           message = "登录已过期或未登录，请重新登录";
           type = "warning";

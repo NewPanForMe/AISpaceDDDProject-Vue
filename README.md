@@ -1874,6 +1874,1088 @@ npm run preview
 3. **添加 API 接口**：在 `DDDVue/src/api` 中统一管理 API
 4. **添加公共组件**：在 `DDDVue/src/components` 中创建组件
 
+### Vue 前端路由规范
+
+#### 概述
+
+本项目采用动态路由配置机制，路由数据从后端 API 动态获取，确保前后端路由一致性。路由配置遵循扁平化结构，所有路由均为单层路由，不存在嵌套路由。
+
+#### 路由配置文件
+
+**主要文件**：
+- `DDDVue/src/router/index.ts`: 路由主配置文件
+- `DDDVue/src/utils/routeGenerator.ts`: 路由存储工具函数
+- `DDDVue/src/views/layout/Layout.vue`: 布局组件（包含侧边栏菜单）
+- `DDDVue/src/api/menu.ts`: 菜单 API 接口
+
+#### 路由数据来源
+
+路由数据从后端 API `http://localhost:5272/api/Menu/GetSidebarMenusAsync` 动态获取：
+
+```typescript
+// router/index.ts
+const createDynamicRouter = async () => {
+  // 从 localStorage 获取已缓存的路由
+  let cachedRoutes = getRoutesFromStorage()
+  
+  // 尝试从 API 获取路由配置
+  try {
+    const response = await menuApi.getSidebarMenuTree()
+    if (response.data && Array.isArray(response.data)) {
+      routesFromApi = convertMenuToRoutes(response.data)
+      // 只有当 API 返回有效路由时才保存
+      if (routesFromApi.length > 0) {
+        saveRoutesToStorage(routesFromApi)
+        cachedRoutes = routesFromApi
+      }
+    }
+  } catch (error) {
+    console.error('从 API 获取路由失败，使用缓存路由:', error)
+  }
+  
+  // 创建路由实例
+  const router = createRouter({
+    history: createWebHistory(),
+    routes: [
+      { path: '/', name: 'login', component: Login },
+      {
+        path: '/',
+        name: 'layout',
+        component: Layout,
+        children: [
+          ...cachedRoutes,  // 动态路由
+          { path: 'profile', name: 'profile', component: Profile },
+          { path: 'clear-cache', name: 'clear-cache', component: ClearCache },
+          { path: ':pathMatch(.*)*', name: 'not-found', component: NotFound }
+        ]
+      }
+    ]
+  })
+  
+  return router
+}
+```
+
+#### 路由结构规范
+
+**1. 扁平化单层路由**
+
+所有路由均为单层结构，不存在嵌套路由：
+
+```typescript
+// ✅ 正确：单层路由
+{
+  path: 'dashboard',
+  name: 'dashboard',
+  component: () => import('../views/home/Dashboard/Dashboard.vue')
+}
+
+// ❌ 错误：嵌套路由（禁止使用）
+{
+  path: 'settings',
+  component: Settings,
+  children: [
+    {
+      path: 'menus',
+      component: SettingsMenus
+    }
+  ]
+}
+```
+
+**2. 路由路径与页面一一对应**
+
+每个路由路径必须对应一个实际的 Vue 页面组件：
+
+```typescript
+// 路由路径: /dashboard
+// 对应页面: DDDVue/src/views/home/Dashboard/Dashboard.vue
+
+// 路由路径: /users
+// 对应页面: DDDVue/src/views/home/Users/Users.vue
+
+// 路由路径: /menu
+// 对应页面: DDDViews/home/menu/Menu.vue
+```
+
+**3. 路由配置接口**
+
+```typescript
+interface RouteConfig {
+  path: string          // 路由路径（必须唯一）
+  name: string          // 路由名称
+  component: string     // 组件路径（相对于 views/home/）
+  icon?: string         // 菜单图标名称
+  parentId?: string | number  // 父菜单 ID（用于菜单树）
+  sortOrder?: number    // 排序序号
+  status?: number       // 状态（0: 禁用, 1: 启用）
+}
+```
+
+#### 路由存储机制
+
+**localStorage 键名统一**：
+
+- **菜单和路由数据**: `sidebarMenu` - 存储侧边栏菜单和路由配置
+
+```typescript
+// utils/routeGenerator.ts
+export const getRoutesFromStorage = (): MenuItem[] => {
+  try {
+    const storedMenu = localStorage.getItem('sidebarMenu')
+    if (storedMenu) {
+      return JSON.parse(storedMenu)
+    }
+  } catch (e) {
+    console.error('解析菜单数据失败', e)
+  }
+  return []
+}
+
+export const saveRoutesToStorage = (menus: MenuItem[]): void => {
+  try {
+    localStorage.setItem('sidebarMenu', JSON.stringify(menus))
+  } catch (e) {
+    console.error('保存菜单数据失败', e)
+  }
+}
+```
+
+#### 路径映射规则
+
+**组件路径自动映射**：
+
+后端返回的 `component` 字段值会自动拼接为完整路径：
+
+```typescript
+// 后端返回
+{
+  path: 'dashboard',
+  component: 'Dashboard/Dashboard'  // 相对于 views/home/
+}
+
+// 实际加载路径
+import('../views/home/Dashboard/Dashboard.vue')
+```
+
+**页面文件命名规范**：
+
+```
+views/home/
+├── Dashboard/
+│   └── Dashboard.vue          # 路由路径: /dashboard
+├── Users/
+│   └── Users.vue              # 路由路径: /users
+├── Products/
+│   └── Products.vue           # 路由路径: /products
+├── Settings/
+│   ├── Settings.vue           # 路由路径: /settings
+│   └── Permissions.vue        # 路由路径: /settings-permissions
+├── menu/
+│   └── Menu.vue               # 路由路径: /menu
+├── Profile/
+│   └── Profile.vue            # 路由路径: /profile
+└── ClearCache/
+    └── ClearCache.vue         # 路由路径: /clear-cache
+```
+
+#### 路由更新机制
+
+**更新路由方法**：
+
+```typescript
+// router/index.ts
+export const updateRoutes = async () => {
+  try {
+    // 从 API 获取最新路由配置
+    const response = await menuApi.getSidebarMenuTree()
+    if (response.data && Array.isArray(response.data)) {
+      const newRoutes = convertMenuToRoutes(response.data)
+      saveRoutesToStorage(newRoutes)
+      return newRoutes
+    }
+    return getRoutesFromStorage()
+  } catch (error) {
+    console.error('更新路由失败:', error)
+    return getRoutesFromStorage()
+  }
+}
+```
+
+**更新路由注意事项**：
+
+1. **页面组件独立性**：
+   - 所有菜单和路由数据统一使用 `sidebarMenu` 键存储
+   - 修改 menu 页不会影响其他页面
+   - 公共组件除外
+
+2. **刷新页面应用新路由**：
+   ```typescript
+   // menu 页更新菜单后刷新路由
+   const refreshSidebarMenu = async () => {
+     try {
+       localStorage.removeItem('sidebarMenu')
+       window.location.reload()  // 重新加载页面以应用新路由
+     } catch (error) {
+       console.error('刷新侧边栏菜单失败:', error)
+     }
+   }
+   ```
+
+#### 菜单与路由关系
+
+**菜单数据结构**（用于侧边栏显示）：
+
+```typescript
+interface MenuItem {
+  id?: string | number
+  path: string        // 路由路径
+  name: string        // 菜单名称
+  icon?: string       // 图标
+  parentId?: string | number
+  children?: MenuItem[]  // 子菜单（仅用于显示，不创建嵌套路由）
+}
+```
+
+**路由数据结构**（用于路由匹配）：
+
+```typescript
+interface RouteConfig {
+  path: string        // 路由路径（扁平化）
+  name: string
+  component: string   // 组件路径
+  icon?: string
+  parentId?: string | number
+  sortOrder?: number
+  status?: number
+}
+```
+
+**关键区别**：
+
+| 特性 | 菜单/路由数据 |
+|-----|--------------|
+| 存储键 | `sidebarMenu` |
+| 结构 | 树形（可嵌套） |
+| 用途 | 侧边栏菜单显示和路由匹配 |
+| 嵌套 | 支持 `children` |
+
+#### 固定路由
+
+以下路由为固定路由，不从 API 动态获取：
+
+```typescript
+{
+  path: 'profile',
+  name: 'profile',
+  component: () => import('../views/home/Profile/Profile.vue')
+},
+{
+  path: 'clear-cache',
+  name: 'clear-cache',
+  component: ClearCache
+},
+{
+  path: ':pathMatch(.*)*',
+  name: 'not-found',
+  component: NotFound
+}
+```
+
+#### 导航守卫
+
+```typescript
+// router/index.ts
+router.beforeEach(async (to, from) => {
+  const token = localStorage.getItem('token')
+
+  // 访问登录页
+  if (to.path === '/') {
+    if (token) {
+      return '/dashboard'  // 已登录跳转到仪表盘
+    } else {
+      return true  // 未登录允许访问
+    }
+  }
+  // 访问受保护页面
+  else {
+    if (!token) {
+      return '/'  // 未登录跳转到登录页
+    } else {
+      return true  // 已登录允许访问
+    }
+  }
+})
+```
+
+#### 开发规范
+
+**1. 添加新页面步骤**：
+
+1. 在 `DDDVue/src/views/home/` 下创建页面组件
+2. 在后端数据库的 `Menu` 表中添加菜单记录：
+   - `Path`: 路由路径（如 `dashboard`）
+   - `Component`: 组件路径（如 `Dashboard/Dashboard`）
+   - `Name`: 菜单名称
+   - `Icon`: 图标名称（可选）
+   - `ParentId`: 父菜单 ID（可选）
+   - `SortOrder`: 排序序号
+   - `Status`: 状态（1: 启用, 0: 禁用）
+3. 清除浏览器 localStorage 或刷新页面
+
+**2. 路径命名规范**：
+
+- 使用短横线命名法：`settings-menus`（不要用 `/settings/menus`）
+- 保持路径简洁：`users`（不要用 `user-management`）
+- 与页面路径一致：`dashboard` → `Dashboard/Dashboard.vue`
+
+**3. 组件独立性原则**：
+
+- 所有菜单和路由数据统一使用 `sidebarMenu` 键存储
+- 修改 menu 页不会影响其他页面
+- 公共组件除外（如 `routeGenerator.ts`）
+
+**4. 错误处理**：
+
+```typescript
+// 路由加载失败时的处理
+const convertMenuToRoutes = (menus: RouteConfig[]): RouteConfig[] => {
+  return menus.map(menu => {
+    try {
+      return {
+        path: menu.path,
+        name: menu.name,
+        component: () => import(`../views/home/${menu.component}.vue`),
+        icon: menu.icon,
+        parentId: menu.parentId,
+        sortOrder: menu.sortOrder,
+        status: menu.status
+      }
+    } catch (error) {
+      console.error(`加载组件失败: ${menu.component}`, error)
+      return null
+    }
+  }).filter(route => route !== null)
+}
+```
+
+#### 常见问题
+
+**Q1: 路由不生效怎么办？**
+
+A: 检查以下几点：
+1. 后端 API `GetSidebarMenusAsync` 是否返回正确数据
+2. `component` 字段路径是否正确
+3. 页面组件是否存在
+4. localStorage 中的路由数据是否正确
+
+**Q2: 如何调试路由？**
+
+A: 在浏览器控制台查看：
+```javascript
+// 查看菜单和路由数据
+localStorage.getItem('sidebarMenu')
+// 清除缓存
+localStorage.removeItem('sidebarMenu')
+```
+
+**Q4: 如何添加子菜单？**
+
+A: 子菜单在后端创建时设置 `ParentId` 指向父菜单 ID，前端会自动构建树形菜单显示，但路由仍然是扁平化的。
+
+#### 总结
+
+本项目的路由规范核心要点：
+
+1. ✅ **动态路由**: 从 API 动态获取路由配置
+2. ✅ **扁平化**: 所有路由均为单层，无嵌套路由
+3. ✅ **一一对应**: 路由路径与页面组件一一对应
+4. ✅ **存储统一**: 菜单和路由数据使用同一个 localStorage 键 `sidebarMenu`
+5. ✅ **独立性**: 页面组件独立，互不影响
+6. ✅ **固定路由**: profile、clear-cache、404 等为固定路由
+
+### 后端 API 开发规范
+
+#### 概述
+
+本项目采用 DDD（Domain-Driven Design）分层架构设计，包含以下四层：
+
+- **Domain 层**: 领域层，包含核心业务逻辑和实体
+- **Application 层**: 应用层，协调领域对象，处理用例
+- **Infrastructure 层**: 基础设施层，实现抽象接口，提供技术细节
+- **API 层**: API 层，处理 HTTP 请求，接收参数，返回响应
+
+#### 添加新 API 功能步骤
+
+**1. 创建实体（Domain 层）**
+
+在 `DDDProject.Domain/Entities/` 目录下创建实体类：
+
+```csharp
+using DDDProject.Domain.Entities;
+
+namespace DDDProject.Domain.Entities;
+
+/// <summary>
+/// 实体描述
+/// </summary>
+public class EntityName : AggregateRoot
+{
+    /// <summary>
+    /// 属性1
+    /// </summary>
+    public string Property1 { get; private set; } = string.Empty;
+
+    /// <summary>
+    /// 属性2
+    /// </summary>
+    public int Property2 { get; private set; }
+
+    /// <summary>
+    /// 构造函数（私有，用于ORM）
+    /// </summary>
+    protected EntityName() { }
+
+    /// <summary>
+    /// 创建实体
+    /// </summary>
+    public static EntityName Create(string property1, int property2)
+    {
+        var entity = new EntityName
+        {
+            Id = Guid.NewGuid(),
+            Property1 = property1,
+            Property2 = property2,
+            CreatedAt = DateTime.Now  // 使用本地时间（中国标准时间）
+        };
+
+        return entity;
+    }
+
+    /// <summary>
+    /// 更新实体
+    /// </summary>
+    public void Update(string? property1 = null, int? property2 = null)
+    {
+        if (!string.IsNullOrEmpty(property1))
+            Property1 = property1;
+
+        if (property2.HasValue)
+            Property2 = property2;
+
+        UpdatedAt = DateTime.Now; // 使用本地时间（中国标准时间）
+    }
+}
+```
+
+**2. 创建仓储接口（Domain 层）**
+
+在 `DDDProject.Domain/Repositories/` 目录下创建接口：
+
+```csharp
+using DDDProject.Domain.Entities;
+
+namespace DDDProject.Domain.Repositories;
+
+/// <summary>
+/// 仓储接口
+/// </summary>
+public interface IEntityNameRepository : IRepository<EntityName>
+{
+    // 自定义方法
+}
+```
+
+**3. 创建仓储实现（Infrastructure 层）**
+
+在 `DDDProject.Infrastructure/Repositories/` 目录下创建实现类：
+
+```csharp
+using DDDProject.Domain.Repositories;
+using DDDProject.Domain.Entities;
+using DDDProject.Infrastructure.Contexts;
+
+namespace DDDProject.Infrastructure.Repositories;
+
+/// <summary>
+/// 仓储实现
+/// </summary>
+public class EntityNameRepository : Repository<EntityName>, IEntityNameRepository
+{
+    public EntityNameRepository(ApplicationDbContext context) : base(context)
+    {
+    }
+}
+```
+
+**4. 创建 DTO（Application 层）**
+
+在 `DDDProject.Application/DTOs/` 目录下创建数据传输对象：
+
+```csharp
+namespace DDDProject.Application.DTOs;
+
+/// <summary>
+/// DTO 描述
+/// </summary>
+public class EntityNameDto
+{
+    public Guid Id { get; set; }
+    public string Property1 { get; set; } = string.Empty;
+    public int Property2 { get; set; }
+}
+```
+
+**5. 创建应用服务接口（Application 层）**
+
+在 `DDDProject.Application/Interfaces/` 目录下创建接口：
+
+```csharp
+using DDDProject.Application.DTOs;
+using DDDProject.Application.Interfaces;
+
+namespace DDDProject.Application.Interfaces;
+
+/// <summary>
+/// 应用服务接口
+/// </summary>
+public interface IEntityNameService : IApplicationService
+{
+    Task<ApiRequestResult> GetEntityNamesAsync(PagedRequest request);
+    Task<ApiRequestResult> GetEntityNameByIdAsync(Guid id);
+    Task<ApiRequestResult> CreateEntityNameAsync(EntityNameDto dto);
+    Task<ApiRequestResult> UpdateEntityNameAsync(EntityNameDto dto);
+    Task<ApiRequestResult> DeleteEntityNameAsync(Guid id);
+}
+```
+
+**6. 创建应用服务实现（Application 层）**
+
+在 `DDDProject.Application/Services/` 目录下创建实现类：
+
+```csharp
+using DDDProject.Application.DTOs;
+using DDDProject.Application.Interfaces;
+using DDDProject.Domain.Entities;
+using DDDProject.Domain.Repositories;
+
+namespace DDDProject.Application.Services;
+
+/// <summary>
+/// 应用服务实现
+/// </summary>
+public class EntityNameService : IEntityNameService
+{
+    private readonly IRepository<EntityName> _repository;
+
+    public EntityNameService(IRepository<EntityName> repository)
+    {
+        _repository = repository;
+    }
+
+    /// <summary>
+    /// 获取实体列表（分页）
+    /// </summary>
+    public async Task<ApiRequestResult> GetEntityNamesAsync(PagedRequest request)
+    {
+        try
+        {
+            var skipCount = (request.PageNumber - 1) * request.PageSize;
+            var total = await _repository.CountAsync(m => true);
+            var entities = await _repository.GetListAsync(
+                m => true,
+                q => q.OrderBy(m => m.Id),
+                skipCount,
+                request.PageSize
+            );
+
+            var dtos = entities.Select(e => new EntityNameDto
+            {
+                Id = e.Id,
+                Property1 = e.Property1,
+                Property2 = e.Property2
+            }).ToList();
+
+            var pagedResult = new PagedResult<EntityNameDto>
+            {
+                List = dtos,
+                Total = total,
+                PageNumber = request.PageNumber,
+                PageSize = request.PageSize
+            };
+
+            return new ApiRequestResult
+            {
+                Success = true,
+                Message = "操作成功",
+                Data = pagedResult
+            };
+        }
+        catch (Exception ex)
+        {
+            return new ApiRequestResult
+            {
+                Success = false,
+                Message = $"获取列表失败: {ex.Message}",
+                Data = null
+            };
+        }
+    }
+
+    /// <summary>
+    /// 获取实体详情
+    /// </summary>
+    public async Task<ApiRequestResult> GetEntityNameByIdAsync(Guid id)
+    {
+        try
+        {
+            var entity = await _repository.FindAsync(id);
+
+            if (entity == null)
+            {
+                return new ApiRequestResult
+                {
+                    Success = false,
+                    Message = "实体不存在",
+                    Data = null
+                };
+            }
+
+            var dto = new EntityNameDto
+            {
+                Id = entity.Id,
+                Property1 = entity.Property1,
+                Property2 = entity.Property2
+            };
+
+            return new ApiRequestResult
+            {
+                Success = true,
+                Message = "操作成功",
+                Data = dto
+            };
+        }
+        catch (Exception ex)
+        {
+            return new ApiRequestResult
+            {
+                Success = false,
+                Message = $"获取详情失败: {ex.Message}",
+                Data = null
+            };
+        }
+    }
+
+    /// <summary>
+    /// 创建实体
+    /// </summary>
+    public async Task<ApiRequestResult> CreateEntityNameAsync(EntityNameDto dto)
+    {
+        try
+        {
+            var entity = EntityName.Create(dto.Property1, dto.Property2);
+
+            await _repository.AddAsync(entity);
+            await _repository.SaveChangesAsync();
+
+            return new ApiRequestResult
+            {
+                Success = true,
+                Message = "创建成功",
+                Data = entity.Id
+            };
+        }
+        catch (Exception ex)
+        {
+            return new ApiRequestResult
+            {
+                Success = false,
+                Message = $"创建失败: {ex.Message}",
+                Data = null
+            };
+        }
+    }
+
+    /// <summary>
+    /// 更新实体
+    /// </summary>
+    public async Task<ApiRequestResult> UpdateEntityNameAsync(EntityNameDto dto)
+    {
+        try
+        {
+            var existing = await _repository.FindAsync(dto.Id);
+            if (existing == null)
+            {
+                return new ApiRequestResult
+                {
+                    Success = false,
+                    Message = "实体不存在",
+                    Data = null
+                };
+            }
+
+            existing.Update(dto.Property1, dto.Property2);
+            _repository.Update(existing);
+            await _repository.SaveChangesAsync();
+
+            return new ApiRequestResult
+            {
+                Success = true,
+                Message = "更新成功",
+                Data = existing.Id
+            };
+        }
+        catch (Exception ex)
+        {
+            return new ApiRequestResult
+            {
+                Success = false,
+                Message = $"更新失败: {ex.Message}",
+                Data = null
+            };
+        }
+    }
+
+    /// <summary>
+    /// 删除实体
+    /// </summary>
+    public async Task<ApiRequestResult> DeleteEntityNameAsync(Guid id)
+    {
+        try
+        {
+            var entity = await _repository.FindAsync(id);
+            if (entity == null)
+            {
+                return new ApiRequestResult
+                {
+                    Success = false,
+                    Message = "实体不存在",
+                    Data = null
+                };
+            }
+
+            _repository.Remove(entity);
+            await _repository.SaveChangesAsync();
+
+            return new ApiRequestResult
+            {
+                Success = true,
+                Message = "删除成功",
+                Data = null
+            };
+        }
+        catch (Exception ex)
+        {
+            return new ApiRequestResult
+            {
+                Success = false,
+                Message = $"删除失败: {ex.Message}",
+                Data = null
+            };
+        }
+    }
+}
+```
+
+**7. 创建控制器（API 层）**
+
+在 `DDDProject.API/Controllers/` 目录下创建控制器：
+
+```csharp
+using DDDProject.Application.DTOs;
+using DDDProject.Application.Interfaces;
+using DDDProject.Application.Common;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+
+namespace DDDProject.API.Controllers;
+
+/// <summary>
+/// 控制器描述
+/// </summary>
+[ApiController]
+[Route("api/[controller]/[action]")]
+[Authorize] // 需要身份验证
+public class EntityNameController : BaseApiController
+{
+    private readonly IEntityNameService _service;
+
+    public EntityNameController(IEntityNameService service)
+    {
+        _service = service;
+    }
+
+    /// <summary>
+    /// 获取实体列表（分页）
+    /// </summary>
+    [HttpGet]
+    [ActionName("GetEntityNamesAsync")]
+    [ApiSearch(Name = "获取实体列表", Description = "返回实体列表（支持分页）", Category = ApiSearchCategory.Other)]
+    public async Task<ApiRequestResult> GetEntityNamesAsync([FromQuery] int pageNum = 1, [FromQuery] int pageSize = 10)
+    {
+        var request = new PagedRequest
+        {
+            PageNumber = pageNum,
+            PageSize = pageSize
+        };
+        return await _service.GetEntityNamesAsync(request);
+    }
+
+    /// <summary>
+    /// 获取实体详情
+    /// </summary>
+    [HttpGet]
+    [ActionName("GetEntityNameByIdAsync")]
+    [ApiSearch(Name = "获取实体详情", Description = "根据ID获取实体详细信息", Category = ApiSearchCategory.Other)]
+    public async Task<ApiRequestResult> GetEntityNameByIdAsync([FromQuery] Guid id)
+    {
+        return await _service.GetEntityNameByIdAsync(id);
+    }
+
+    /// <summary>
+    /// 创建实体
+    /// </summary>
+    [HttpPost]
+    [ActionName("CreateEntityNameAsync")]
+    [ApiSearch(Name = "创建实体", Description = "创建新的实体", Category = ApiSearchCategory.Other)]
+    public async Task<ApiRequestResult> CreateEntityNameAsync([FromBody] EntityNameDto dto)
+    {
+        return await _service.CreateEntityNameAsync(dto);
+    }
+
+    /// <summary>
+    /// 更新实体
+    /// </summary>
+    [HttpPut]
+    [ActionName("UpdateEntityNameAsync")]
+    [ApiSearch(Name = "更新实体", Description = "更新现有实体", Category = ApiSearchCategory.Other)]
+    public async Task<ApiRequestResult> UpdateEntityNameAsync([FromBody] EntityNameDto dto)
+    {
+        return await _service.UpdateEntityNameAsync(dto);
+    }
+
+    /// <summary>
+    /// 删除实体
+    /// </summary>
+    [HttpDelete]
+    [ActionName("DeleteEntityNameAsync")]
+    [ApiSearch(Name = "删除实体", Description = "根据ID删除实体", Category = ApiSearchCategory.Other)]
+    public async Task<ApiRequestResult> DeleteEntityNameAsync([FromQuery] Guid id)
+    {
+        return await _service.DeleteEntityNameAsync(id);
+    }
+}
+```
+
+**8. 添加数据库迁移**
+
+```bash
+# 进入项目目录
+cd DDDProject
+
+# 添加迁移
+dotnet ef migrations add CreateEntityName --project DDDProject.Infrastructure --startup-project DDDProject.API
+
+# 更新数据库
+dotnet ef database update --project DDDProject.Infrastructure --startup-project DDDProject.API
+```
+
+#### 路由配置 API 开发示例
+
+**1. 创建路由配置模型（Domain 层）**
+
+在 `DDDProject.Domain/Models/` 目录下创建 `RouteConfig.cs`：
+
+```csharp
+namespace DDDProject.Domain.Models;
+
+/// <summary>
+/// 路由配置模型
+/// </summary>
+public class RouteConfig
+{
+    /// <summary>
+    /// 路由路径
+    /// </summary>
+    public string Path { get; set; } = string.Empty;
+
+    /// <summary>
+    /// 路由名称
+    /// </summary>
+    public string Name { get; set; } = string.Empty;
+
+    /// <summary>
+    /// 组件路径
+    /// </summary>
+    public string Component { get; set; } = string.Empty;
+
+    /// <summary>
+    /// 图标名称（可选）
+    /// </summary>
+    public string? Icon { get; set; }
+
+    /// <summary>
+    /// 父级菜单ID（可选）
+    /// </summary>
+    public Guid? ParentId { get; set; }
+
+    /// <summary>
+    /// 排序号（可选）
+    /// </summary>
+    public int SortOrder { get; set; } = 0;
+
+    /// <summary>
+    /// 菜单状态：0-禁用，1-启用（可选）
+    /// </summary>
+    public int Status { get; set; } = 1;
+
+    /// <summary>
+    /// 子菜单列表（可选）
+    /// </summary>
+    public List<RouteConfig>? Children { get; set; }
+}
+```
+
+**2. 在菜单服务接口中添加方法（Application 层）**
+
+在 `DDDProject.Application/Interfaces/IMenuService.cs` 中添加：
+
+```csharp
+/// <summary>
+/// 获取路由配置（用于前端动态路由）
+/// </summary>
+Task<ApiRequestResult> GetRoutesAsync();
+```
+
+**3. 在菜单服务实现中添加方法（Application 层）**
+
+在 `DDDProject.Application/Services/MenuService.cs` 中添加：
+
+```csharp
+/// <summary>
+/// 获取路由配置（用于前端动态路由）
+/// </summary>
+public async Task<ApiRequestResult> GetRoutesAsync()
+{
+    try
+    {
+        // 获取所有菜单
+        var menus = await _menuRepository.GetListAsync(m => true);
+        
+        // 构建路由配置列表
+        var routeConfigs = BuildRouteConfigs(menus.ToList());
+
+        return new ApiRequestResult
+        {
+            Success = true,
+            Message = "操作成功",
+            Data = routeConfigs
+        };
+    }
+    catch (Exception ex)
+    {
+        return new ApiRequestResult
+        {
+            Success = false,
+            Message = $"获取路由配置失败: {ex.Message}",
+            Data = null
+        };
+    }
+}
+
+/// <summary>
+/// 构建路由配置列表
+/// </summary>
+private List<RouteConfig> BuildRouteConfigs(List<Menu> allMenus)
+{
+    // 获取根节点
+    var rootMenus = allMenus.Where(m => m.ParentId == null || m.ParentId == Guid.Empty)
+                           .OrderBy(m => m.SortOrder)
+                           .ToList();
+
+    var result = new List<RouteConfig>();
+
+    foreach (var menu in rootMenus)
+    {
+        var routeConfig = BuildRouteConfig(menu, allMenus);
+        result.Add(routeConfig);
+    }
+
+    return result;
+}
+
+/// <summary>
+/// 递归构建路由配置
+/// </summary>
+private RouteConfig BuildRouteConfig(Menu menu, List<Menu> allMenus)
+{
+    var children = allMenus.Where(m => m.ParentId == menu.Id).OrderBy(m => m.SortOrder).ToList();
+
+    return new RouteConfig
+    {
+        Path = menu.Path,
+        Name = menu.Name,
+        Component = menu.Component,
+        Icon = menu.Icon,
+        ParentId = menu.ParentId,
+        SortOrder = menu.SortOrder,
+        Status = menu.Status,
+        Children = children.Any() ? children.Select(m => BuildRouteConfig(m, allMenus)).ToList() : null
+    };
+}
+```
+
+**4. 在菜单控制器中添加 API 端点（API 层）**
+
+在 `DDDProject.API/Controllers/MenuController.cs` 中添加：
+
+```csharp
+/// <summary>
+/// 获取路由配置（用于前端动态路由）
+/// </summary>
+[HttpGet]
+[ActionName("GetRoutesAsync")]
+[ApiSearch(Name = "获取路由配置", Description = "返回路由配置列表，用于前端动态路由", Category = ApiSearchCategory.Menu)]
+public async Task<ApiRequestResult> GetRoutesAsync()
+{
+    return await _menuService.GetRoutesAsync();
+}
+```
+
+**5. 前端调用示例**
+
+```typescript
+// api/menu.ts
+export const getRoutes = () => {
+  return http.get<RouteConfig[]>(api.Menu.GetRoutesAsync)
+}
+
+// router/index.ts
+import * as menuApi from '@/api/menu'
+
+const createDynamicRouter = async () => {
+  try {
+    const response = await menuApi.getRoutes()
+    if (response.data && Array.isArray(response.data)) {
+      // 使用路由配置
+      const routes = response.data
+    }
+  } catch (error) {
+    console.error('获取路由配置失败:', error)
+  }
+}
+```
+
+#### 注意事项
+
+- ✅ 所有数据库操作必须使用异步方法（`ToListAsync()`、`FirstOrDefaultAsync()` 等）
+- ✅ 控制器方法必须使用 `[ActionName]` 注解
+- ✅ 实体属性使用私有 setter，通过方法修改
+- ✅ 使用 `DateTime.Now` 代替 `DateTime.UtcNow`（中国标准时间）
+- ✅ 路由配置 API 返回树形结构数据
+- ✅ 添加新功能后需要添加数据库迁移并更新数据库
+- ⚠️ 修改模型后需要添加迁移并更新数据库
+
 ## 注意事项
 
 - 遵循 DDD 设计原则
@@ -1883,3 +2965,105 @@ npm run preview
 - API 层仅处理 HTTP 相关注
 - 数据库连接字符串已配置，如需修改请更新 `DDDProject/API/appsettings.json`
 - 前端 API 基础地址配置在 `DDDVue/src/utils/http.ts`
+
+## 前端 localStorage 分类管理
+
+### 概述
+
+本项目已实现统一的 localStorage 分类管理工具，将缓存数据按功能分类，便于管理和清除。
+
+### 分类说明
+
+#### 1. Login（登录缓存）
+存储与用户登录相关的信息：
+- `token`: JWT 认证令牌
+- `userInfo`: 用户基本信息（userId, userName, realName）
+
+#### 2. Menu（菜单缓存）
+存储与菜单相关的信息：
+- `sidebarMenu`: 侧边栏菜单数据（从 API 获取的菜单树）
+
+#### 3. List（列表缓存）
+预留分类，用于存储列表数据缓存（当前未使用）
+
+#### 4. All（全部缓存）
+包含以上所有分类的缓存数据
+
+### 使用方法
+
+#### 导入工具
+
+```typescript
+import { getItem, setItem, removeItem, clearByCategory, StorageKeys, getStorageStats } from '@/utils/storage'
+```
+
+#### 基本操作
+
+```typescript
+// 获取数据
+const token = getItem<string>(StorageKeys.Token)
+const userInfo = getItem<UserInfo>(StorageKeys.UserInfo)
+
+// 设置数据
+setItem(StorageKeys.Token, token)
+setItem(StorageKeys.UserInfo, userInfo)
+
+// 移除数据
+removeItem(StorageKeys.Token)
+```
+
+#### 分类清除
+
+```typescript
+// 清除登录缓存
+clearByCategory('Login')
+
+// 清除菜单缓存
+clearByCategory('Menu')
+
+// 清除列表缓存
+clearByCategory('List')
+
+// 清除全部缓存
+clearByCategory('All')
+```
+
+#### 获取缓存统计
+
+```typescript
+// 获取各分类的缓存项数
+const stats = getStorageStats()
+console.log(stats['Login'])  // 登录缓存项数
+console.log(stats['Menu'])   // 菜单缓存项数
+```
+
+### 更新的文件
+
+#### 新建文件
+- `src/utils/storage.ts`: localStorage 分类管理工具
+
+#### 修改文件
+- `src/views/home/ClearCache/ClearCache.vue`: 更新清除缓存页面，支持分类清除
+- `src/views/layout/Layout.vue`: 使用新的 storage 工具
+- `src/views/Login.vue`: 使用新的 storage 工具
+- `src/views/home/Profile/Profile.vue`: 使用新的 storage 工具
+- `src/views/home/menu/Menu.vue`: 使用新的 storage 工具
+- `src/router/index.ts`: 使用新的 storage 工具
+- `src/router/detail.ts`: 使用新的 storage 工具
+- `src/utils/http.ts`: 使用新的 storage 工具
+- `src/utils/routeGenerator.ts`: 使用新的 storage 工具
+
+### 优势
+
+1. **统一管理**: 所有 localStorage 操作通过统一的工具函数进行
+2. **分类清晰**: 按功能分类存储，便于管理和清除
+3. **类型安全**: 使用 TypeScript 类型定义，提供更好的开发体验
+4. **易于维护**: 修改存储键名时只需在 `StorageKeys` 中修改一次
+5. **错误处理**: 工具函数内部已包含错误处理，无需在业务代码中重复处理
+
+### 注意事项
+
+1. 所有数据存储都使用 `JSON.stringify` 和 `JSON.parse` 进行序列化
+2. 获取数据时建议使用泛型指定类型：`getItem<T>(key)`
+3. 清除缓存后可能需要刷新页面或重新加载数据
+4. 在清除登录缓存后，通常需要跳转到登录页

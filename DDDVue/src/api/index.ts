@@ -73,6 +73,7 @@ export interface ApiConfig {
     GetTreeMenusAsync: string;
     GetPagedTreeMenusAsync: string;
     GetUserMenuTreeAsync: string;
+    GetRoutesAsync: string;
     CreateMenuAsync: string;
     UpdateMenuAsync: string;
     DeleteMenuAsync: string;
@@ -95,6 +96,7 @@ const api: ApiConfig = {
     GetTreeMenusAsync: 'api/Menu/GetTreeMenusAsync',
     GetPagedTreeMenusAsync: 'api/Menu/GetPagedTreeMenusAsync',
     GetUserMenuTreeAsync: 'api/Menu/GetUserMenuTreeAsync',
+    GetRoutesAsync: 'api/Menu/GetRoutesAsync',
     CreateMenuAsync: 'api/Menu/CreateMenuAsync',
     UpdateMenuAsync: 'api/Menu/UpdateMenuAsync',
     DeleteMenuAsync: 'api/Menu/DeleteMenuAsync',

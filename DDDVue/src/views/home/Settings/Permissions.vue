@@ -1,11 +1,10 @@
 <template>
-  <div class="settings-page">
-    <h2 class="page-title">系统设置</h2>
-    <div class="settings-content">
+  <div class="permissions-page">
+    <h2 class="page-title">权限管理</h2>
+    <div class="permissions-content">
       <el-card>
-        <p class="placeholder-text">系统设置功能开发中...</p>
+        <p class="placeholder-text">权限管理功能开发中...</p>
       </el-card>
-      <router-view />
     </div>
   </div>
 </template>
@@ -14,7 +13,7 @@
 </script>
 
 <style scoped>
-.settings-page {
+.permissions-page {
   padding: 20px;
 }
 
@@ -25,7 +24,7 @@
   margin-bottom: 20px;
 }
 
-.settings-content {
+.permissions-content {
   height: calc(100vh - 150px);
 }
 

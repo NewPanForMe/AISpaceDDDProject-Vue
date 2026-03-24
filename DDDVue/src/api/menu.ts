@@ -22,11 +22,27 @@ export interface MenuTree {
   children?: MenuTree[]
 }
 
+// 路由配置接口
+export interface RouteConfig {
+  path: string
+  name: string
+  component: string
+  icon?: string
+  parentId?: string | number
+  sortOrder?: number
+  status?: number
+  children?: RouteConfig[]
+}
+
 // 获取菜单树（所有菜单）- 返回树形结构，无需再次转换
 export const getMenuTree = () => {
   return http.get<MenuTree[]>(api.Menu.GetSidebarMenusAsync)
 }
 
+// 获取路由配置（用于前端动态路由）
+export const getRoutes = () => {
+  return http.get<RouteConfig[]>(api.Menu.GetRoutesAsync)
+}
 
 // 获取分页菜单树（用于大数据量）
 export const getPagedMenuTree = (params?: PageParams) => {

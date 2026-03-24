@@ -13,12 +13,15 @@
           <el-table-column prop="name" label="菜单名称" min-width="150" />
           <el-table-column prop="path" label="路由路径" min-width="150" />
           <el-table-column prop="component" label="组件路径" min-width="180" />
-          <el-table-column prop="icon" label="图标" width="100">
+          <el-table-column prop="icon" label="图标" width="120">
             <template #default="{ row }">
-              <el-icon v-if="row.icon">
-                <component :is="row.icon" />
-              </el-icon>
-              <span v-else>{{ row.icon }}</span>
+              <div class="icon-cell" v-if="row.icon">
+                <el-icon v-if="row.icon">
+                  <component :is="row.icon" />
+                </el-icon>
+                <span class="icon-name">{{ row.icon }}</span>
+              </div>
+              <span v-else class="no-icon">无</span>
             </template>
           </el-table-column>
           <el-table-column prop="sortOrder" label="排序" width="80" />
@@ -47,7 +50,7 @@
     </div>
 
     <!-- 菜单编辑对话框 -->
-    <el-dialog v-model="dialogVisible" :title="dialogTitle" width="600px">
+    <el-dialog v-model="dialogVisible" :title="dialogTitle" width="600px" :destroy-on-close="true">
       <el-form :model="menuForm" :rules="menuRules" ref="menuFormRef" label-width="100px">
         <el-form-item label="菜单名称" prop="name">
           <el-input v-model="menuForm.name" placeholder="请输入菜单名称" />
@@ -64,7 +67,21 @@
           <el-input v-model="menuForm.component" placeholder="请输入组件路径" />
         </el-form-item>
         <el-form-item label="图标">
-          <el-input v-model="menuForm.icon" placeholder="请输入图标名称" />
+          <el-select v-model="menuForm.icon" placeholder="请选择图标" clearable style="width: 100%">
+            <template #prefix>
+              <el-icon v-if="menuForm.icon" :size="20">
+                <component :is="menuForm.icon" />
+              </el-icon>
+            </template>
+            <el-option v-for="icon in allIcons" :key="icon" :value="icon" :label="icon">
+              <div class="icon-option">
+                <el-icon :size="32">
+                  <component :is="icon" />
+                </el-icon>
+                <span class="icon-name">{{ icon }}</span>
+              </div>
+            </el-option>
+          </el-select>
         </el-form-item>
         <el-form-item label="排序">
           <el-input-number v-model="menuForm.sortOrder" :min="0" />
@@ -85,10 +102,12 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import * as menuApi from '@/api/menu'
 import type { PageParams } from '@/api/menu'
+import * as Icons from '@element-plus/icons-vue'
+import { removeItem, StorageKeys } from '@/utils/storage'
 
 // 解构导入 API 函数
 const { getPagedMenuTree, addMenu: addMenuApi, updateMenu: updateMenuApi, deleteMenu: deleteMenuApi } = menuApi
@@ -144,6 +163,12 @@ const pagination = ref({
   pageNum: 1,
   pageSize: 10,
   total: 0
+})
+
+// 所有 Element Plus 图标列表
+const allIcons = Object.keys(Icons).filter(iconName => {
+  // 过滤掉非图标组件
+  return !iconName.startsWith('_') && !iconName.startsWith('install') && iconName !== 'default'
 })
 
 // 菜单表单验证规则
@@ -262,7 +287,7 @@ const submitMenuForm = async () => {
 // 刷新侧边栏菜单
 const refreshSidebarMenu = async () => {
   try {
-    localStorage.removeItem('sidebarMenu')
+    removeItem(StorageKeys.SidebarMenu)
     window.location.reload()
   } catch (error) {
     console.error('刷新侧边栏菜单失败:', error)
@@ -318,5 +343,77 @@ onMounted(() => {
 
 .dialog-footer {
   text-align: right;
+}
+
+/* 图标单元格样式 */
+.icon-cell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.icon-name {
+  font-size: 12px;
+  color: #666;
+}
+
+.no-icon {
+  color: #999;
+  font-style: italic;
+}
+
+/* 图标选择器样式 */
+.icon-selector {
+  position: relative;
+  width: 100%;
+}
+
+.icon-selector :deep(.el-input__wrapper) {
+  overflow: visible !important;
+}
+
+.icon-selector :deep(.icon-trigger) {
+  cursor: pointer;
+  transition: transform 0.3s;
+}
+
+.icon-selector :deep(.icon-trigger:hover) {
+  transform: scale(1.1);
+}
+
+/* el-select 图标选项样式 */
+.icon-option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.icon-name {
+  font-size: 14px;
+  color: #606266;
+}
+
+/* el-select 图标选项样式 */
+:deep(.el-select .el-select__prefix) {
+  display: flex;
+  align-items: center;
+}
+
+:deep(.el-select .el-select__prefix .el-icon) {
+  display: flex;
+}
+
+/* el-select 下拉菜单样式 */
+:deep(.el-select-dropdown__option) {
+  padding: 10px 20px;
+}
+
+:deep(.el-select-dropdown__option:hover) {
+  background-color: #f5f7fa;
+}
+
+:deep(.el-select-dropdown__option.selected) {
+  background-color: #f5f7fa;
+  font-weight: bold;
 }
 </style>

@@ -101,13 +101,14 @@ public class Menu : AggregateRoot
     /// <param name="icon">图标</param>
     /// <param name="parentId">父级菜单ID</param>
     /// <param name="sortOrder">排序号</param>
+    /// <param name="status">状态</param>
     public void Update(
         string? name = null, 
         string? path = null, 
         string? component = null, 
         string? icon = null, 
         Guid? parentId = null, 
-        int? sortOrder = null)
+        int? sortOrder = null,int? status = null)
     {
         if (!string.IsNullOrEmpty(name))
             Name = name;
@@ -127,7 +128,12 @@ public class Menu : AggregateRoot
         if (sortOrder.HasValue)
             SortOrder = sortOrder.Value;
 
+        if (status.HasValue)
+            Status = status.Value;
+
         UpdatedAt = DateTime.Now;
+
+
     }
 
     /// <summary>

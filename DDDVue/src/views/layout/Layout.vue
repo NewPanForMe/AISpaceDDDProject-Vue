@@ -4,6 +4,8 @@ import { RouterLink, useRouter } from 'vue-router'
 import { User, Fold, Expand, Collection, Menu, Setting } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import * as menuApi from '@/api/menu'
+import * as Icons from '@element-plus/icons-vue'
+import { getItem, setItem, removeItem, clearByCategory, StorageKeys } from '@/utils/storage'
 
 // 菜单数据
 interface MenuItem {
@@ -31,36 +33,20 @@ const isMenuLoaded = ref(false)
 
 // 获取用户信息
 const getUserInfo = () => {
-  const storedInfo = localStorage.getItem('userInfo')
+  const storedInfo = getItem<UserInfo>(StorageKeys.UserInfo)
   if (storedInfo) {
-    try {
-      userInfo.value = JSON.parse(storedInfo)
-    } catch (e) {
-      console.error('解析用户信息失败', e)
-    }
+    userInfo.value = storedInfo
   }
 }
 
 // 从 localStorage 获取菜单数据
 const getMenuFromStorage = (): MenuItem[] | null => {
-  try {
-    const storedMenu = localStorage.getItem('sidebarMenu')
-    if (storedMenu) {
-      return JSON.parse(storedMenu)
-    }
-  } catch (e) {
-    console.error('解析菜单数据失败', e)
-  }
-  return null
+  return getItem<MenuItem[]>(StorageKeys.SidebarMenu)
 }
 
 // 将菜单数据保存到 localStorage
 const saveMenuToStorage = (menuList: MenuItem[]) => {
-  try {
-    localStorage.setItem('sidebarMenu', JSON.stringify(menuList))
-  } catch (e) {
-    console.error('保存菜单数据失败', e)
-  }
+  setItem(StorageKeys.SidebarMenu, menuList)
 }
 
 
@@ -70,7 +56,6 @@ const loadMenuTree = async () => {
   const cachedMenu = getMenuFromStorage()
   if (cachedMenu) {
     menuList.value = cachedMenu
-    // 动态添加路由
     isMenuLoaded.value = true
     return
   }
@@ -80,8 +65,6 @@ const loadMenuTree = async () => {
     if (response.data && Array.isArray(response.data)) {
       // 后端已返回树形结构，无需再次转换
       menuList.value = response.data
-      // 动态添加路由
-      addDynamicRoutes(response.data)
       saveMenuToStorage(response.data)
       isMenuLoaded.value = true
     }
@@ -91,15 +74,30 @@ const loadMenuTree = async () => {
   }
 }
 
-// 根据图标名称获取图标组件
+
+
+// 根据图标名称获取图标组件（支持所有 Element Plus 图标）
 const getIconByName = (iconName: string) => {
   if (!iconName) return null
 
+  // 优先从 Element Plus 图标中查找
+  const iconComponent = Icons[iconName as keyof typeof Icons]
+  if (iconComponent) {
+    return markRaw(iconComponent)
+  }
+
+  // 兼容旧的映射表
   const iconMap: Record<string, any> = {
-    'Collection': markRaw(Collection),
-    'Menu': markRaw(Menu),
-    'User': markRaw(User),
-    'Setting': markRaw(Setting)
+    'HomeOutlined': markRaw(Collection),
+    'MenuOutlined': markRaw(Menu),
+    'UserOutlined': markRaw(User),
+    'SettingOutlined': markRaw(Setting),
+    'TeamOutlined': markRaw(User),
+    'SafetyCertificateOutlined': markRaw(Setting),
+    'AppstoreOutlined': markRaw(Collection),
+    'ShoppingOutlined': markRaw(Collection),
+    'TagOutlined': markRaw(Collection),
+    'LockOutlined': markRaw(Setting)
   }
 
   return iconMap[iconName] || null
@@ -107,7 +105,7 @@ const getIconByName = (iconName: string) => {
 
 // 清除菜单缓存（用于菜单更新后刷新）
 const clearMenuCache = () => {
-  localStorage.removeItem('sidebarMenu')
+  removeItem(StorageKeys.SidebarMenu)
 }
 
 // 侧边栏折叠切换
@@ -128,11 +126,6 @@ const handleMobileMenuClick = () => {
 
 // 菜单点击处理
 const handleMenuClick = (item: MenuItem) => {
-  // 如果有子菜单，不进行路由跳转
-  if (item.children && item.children.length > 0) {
-    return
-  }
-
   handleMobileMenuClick()
   if (item.path) {
     router.push(item.path)
@@ -141,22 +134,21 @@ const handleMenuClick = (item: MenuItem) => {
 
 // 退出登录
 const handleLogout = () => {
-  localStorage.removeItem('token')
-  localStorage.removeItem('userInfo')
-  localStorage.removeItem('sidebarMenu')
+  clearByCategory('Login')
   ElMessage.success('已退出登录')
   router.push('/')
 }
 
-// 清除缓存
-const clearCache = () => {
-  localStorage.removeItem('token')
-  localStorage.removeItem('userInfo')
-  localStorage.removeItem('sidebarMenu')
-  ElMessage.success('缓存已清除')
-  // 刷新页面以重新加载菜单和路由
-  window.location.href = '/'
+// 处理下拉菜单命令
+const handleDropdownCommand = (command: string) => {
+  if (command === 'logout') {
+    handleLogout()
+  } else if (command === 'clearCache') {
+    router.push('/clear-cache')
+  }
 }
+
+
 
 // 响应式检测
 const checkMobile = () => {
@@ -203,10 +195,7 @@ watch(
         <h1 class="logo" :class="{ 'hidden': isMobile }">智能管理系统</h1>
       </div>
       <div class="header-right">
-        <el-button type="danger" size="small" @click="clearCache" style="margin-right: 10px;">
-          清除缓存
-        </el-button>
-        <el-dropdown trigger="hover">
+        <el-dropdown trigger="hover" @command="handleDropdownCommand">
           <div class="user-info">
             <el-icon :size="20">
               <User />
@@ -215,10 +204,13 @@ watch(
           </div>
           <template #dropdown>
             <el-dropdown-menu>
-              <el-dropdown-item>
+              <el-dropdown-item command="profile">
                 <RouterLink to="/profile" class="dropdown-item">个人中心</RouterLink>
               </el-dropdown-item>
-              <el-dropdown-item divided @click="handleLogout">
+              <el-dropdown-item command="clearCache">
+                清理缓存
+              </el-dropdown-item>
+              <el-dropdown-item divided command="logout">
                 退出登录
               </el-dropdown-item>
             </el-dropdown-menu>

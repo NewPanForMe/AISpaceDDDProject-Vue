@@ -117,4 +117,9 @@ public class Repository<TEntity, TId> : IRepository<TEntity, TId>
         }
         return await _dbSet.CountAsync(predicate, cancellationToken);
     }
+
+    public async Task SaveChangesAsync(CancellationToken cancellationToken = default)
+    {
+        await _context.SaveChangesAsync(cancellationToken);
+    }
 }

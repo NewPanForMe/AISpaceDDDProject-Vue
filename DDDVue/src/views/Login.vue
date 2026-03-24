@@ -16,6 +16,7 @@ import { http } from '../utils/http'
 import api from '../api/index'
 import { showSuccessNotification } from '../utils/notification'
 import { aesEncrypt } from '../utils/crypto'
+import { setItem, StorageKeys } from '@/utils/storage'
 
 
 
@@ -100,7 +101,7 @@ const handleSubmit = async () => {
       // 保存 token
       const token = response.data?.token || ''
       if (token) {
-        localStorage.setItem('token', token)
+        setItem(StorageKeys.Token, token)
       }
 
       // 保存用户信息
@@ -110,7 +111,7 @@ const handleSubmit = async () => {
         realName: response.data?.realName
       }
       if (response.data?.userName) {
-        localStorage.setItem('userInfo', JSON.stringify(userInfo))
+        setItem(StorageKeys.UserInfo, userInfo)
       }
 
       // 显示成功提示

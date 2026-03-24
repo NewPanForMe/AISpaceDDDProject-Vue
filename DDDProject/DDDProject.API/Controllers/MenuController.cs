@@ -2,6 +2,7 @@ using DDDProject.Application.DTOs;
 using DDDProject.Application.Interfaces;
 using DDDProject.Application.Common;
 using DDDProject.API.Extensions;
+using DDDProject.Domain.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -25,33 +26,6 @@ public class MenuController : BaseApiController
     }
 
     /// <summary>
-    /// 获取菜单列表（分页）
-    /// </summary>
-    [HttpGet]
-    [ActionName("GetMenusAsync")]
-    [ApiSearch(Name = "获取菜单列表", Description = "返回系统中所有的菜单项（支持分页）", Category = ApiSearchCategory.Menu)]
-    public async Task<ApiRequestResult> GetMenusAsync([FromQuery] int pageNum = 1, [FromQuery] int pageSize = 10)
-    {
-        var request = new PagedRequest
-        {
-            PageNumber = pageNum,
-            PageSize = pageSize
-        };
-        return await _menuService.GetMenusAsync(request);
-    }
-
-    /// <summary>
-    /// 获取菜单详情
-    /// </summary>
-    [HttpGet]
-    [ActionName("GetMenuByIdAsync")]
-    [ApiSearch(Name = "获取菜单详情", Description = "根据ID获取特定菜单的详细信息", Category = ApiSearchCategory.Menu)]
-    public async Task<ApiRequestResult> GetMenuByIdAsync([FromQuery] Guid id)
-    {
-        return await _menuService.GetMenuByIdAsync(id);
-    }
-
-    /// <summary>
     /// 获取树形结构的菜单（用于侧边栏菜单，无需分页）
     /// </summary>
     [HttpGet]
@@ -62,22 +36,16 @@ public class MenuController : BaseApiController
         return await _menuService.GetSidebarMenusAsync();
     }
 
+
     /// <summary>
-    /// 获取用户特定菜单树形结构
+    /// 获取路由配置（用于前端动态路由）
     /// </summary>
     [HttpGet]
-    [ActionName("GetUserMenuTreeAsync")]
-    [ApiSearch(Name = "获取用户菜单树", Description = "返回当前用户的菜单树形结构", Category = ApiSearchCategory.Menu)]
-    public async Task<ApiRequestResult> GetUserMenuTreeAsync()
+    [ActionName("GetRoutesAsync")]
+    [ApiSearch(Name = "获取路由配置", Description = "返回路由配置列表，用于前端动态路由", Category = ApiSearchCategory.Menu)]
+    public async Task<ApiRequestResult> GetRoutesAsync()
     {
-        // 可以根据当前用户获取特定的菜单
-        var userId = _currentUser.UserId;
-        var userName = _currentUser.UserName;
-        var realName = _currentUser.RealName;
-
-        // 这里假设IMenuService有一个方法来获取用户特定的菜单
-        // 如果MenuService没有这个方法，我们稍后会对其进行扩展
-        return await _menuService.GetUserMenuTreeAsync(userId);
+        return await _menuService.GetRoutesAsync();
     }
 
     /// <summary>
@@ -138,19 +106,4 @@ public class MenuController : BaseApiController
         return await _menuService.DisableMenuAsync(id);
     }
 
-    /// <summary>
-    /// 获取分页的树形菜单数据（用于大数据量场景）
-    /// </summary>
-    [HttpGet]
-    [ActionName("GetPagedTreeMenusAsync")]
-    [ApiSearch(Name = "获取分页树形菜单", Description = "分页获取树形菜单数据，适用于大数据量场景", Category = ApiSearchCategory.Menu)]
-    public async Task<ApiRequestResult> GetPagedTreeMenusAsync([FromQuery] int pageNum = 1, [FromQuery] int pageSize = 1000)
-    {
-        var request = new PagedRequest
-        {
-            PageNumber = pageNum,
-            PageSize = pageSize
-        };
-        return await _menuService.GetPagedTreeMenusAsync(request);
-    }
 }
