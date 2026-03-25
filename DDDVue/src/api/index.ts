@@ -14,6 +14,78 @@ export interface LoginResponse {
   realName: string;
 }
 
+// ==================== 用户模块 ====================
+export interface UserDto {
+  id: string;
+  userName: string;
+  email: string;
+  phoneNumber?: string;
+  realName?: string;
+  avatar?: string;
+  status: number;
+  lastLoginTime?: string;
+  lastLoginIp?: string;
+  remark?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateUserRequest {
+  userName: string;
+  email: string;
+  password: string;
+  realName?: string;
+  phoneNumber?: string;
+  avatar?: string;
+  remark?: string;
+}
+
+export interface UpdateUserRequest {
+  id: string;
+  email?: string;
+  phoneNumber?: string;
+  realName?: string;
+  avatar?: string;
+  remark?: string;
+  status?: number;
+}
+
+export interface ResetPasswordRequest {
+  id: string;
+  newPassword: string;
+}
+
+// ==================== 角色模块 ====================
+export interface RoleDto {
+  id: string;
+  name: string;
+  code: string;
+  description?: string;
+  status: number;
+  sortOrder: number;
+  remark?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateRoleRequest {
+  name: string;
+  code: string;
+  description?: string;
+  sortOrder: number;
+  remark?: string;
+}
+
+export interface UpdateRoleRequest {
+  id: string;
+  name?: string;
+  code?: string;
+  description?: string;
+  sortOrder?: number;
+  remark?: string;
+  status?: number;
+}
+
 // ==================== 菜单模块 ====================
 export interface MenuDto {
   id?: string;
@@ -80,6 +152,30 @@ export interface ApiConfig {
     EnableMenuAsync: string;
     DisableMenuAsync: string;
   };
+  User: {
+    GetUsersAsync: string;
+    GetUserByIdAsync: string;
+    CreateUserAsync: string;
+    UpdateUserAsync: string;
+    DeleteUserAsync: string;
+    EnableUserAsync: string;
+    DisableUserAsync: string;
+    ResetPasswordAsync: string;
+  };
+  Role: {
+    GetRolesAsync: string;
+    GetRoleByIdAsync: string;
+    CreateRoleAsync: string;
+    UpdateRoleAsync: string;
+    DeleteRoleAsync: string;
+    EnableRoleAsync: string;
+    DisableRoleAsync: string;
+    GetUserRoleIdsAsync: string;
+    AssignUserRolesAsync: string;
+    GetEnabledRolesAsync: string;
+    GetRoleUserIdsAsync: string;
+    AssignRoleUsersAsync: string;
+  };
 }
 
 // ==================== API 配置对象 ====================
@@ -102,6 +198,30 @@ const api: ApiConfig = {
     DeleteMenuAsync: 'api/Menu/DeleteMenuAsync',
     EnableMenuAsync: 'api/Menu/EnableMenuAsync',
     DisableMenuAsync: 'api/Menu/DisableMenuAsync',
+  },
+  User: {
+    GetUsersAsync: 'api/User/GetUsersAsync',
+    GetUserByIdAsync: 'api/User/GetUserByIdAsync',
+    CreateUserAsync: 'api/User/CreateUserAsync',
+    UpdateUserAsync: 'api/User/UpdateUserAsync',
+    DeleteUserAsync: 'api/User/DeleteUserAsync',
+    EnableUserAsync: 'api/User/EnableUserAsync',
+    DisableUserAsync: 'api/User/DisableUserAsync',
+    ResetPasswordAsync: 'api/User/ResetPasswordAsync',
+  },
+  Role: {
+    GetRolesAsync: 'api/Role/GetRolesAsync',
+    GetRoleByIdAsync: 'api/Role/GetRoleByIdAsync',
+    CreateRoleAsync: 'api/Role/CreateRoleAsync',
+    UpdateRoleAsync: 'api/Role/UpdateRoleAsync',
+    DeleteRoleAsync: 'api/Role/DeleteRoleAsync',
+    EnableRoleAsync: 'api/Role/EnableRoleAsync',
+    DisableRoleAsync: 'api/Role/DisableRoleAsync',
+    GetUserRoleIdsAsync: 'api/Role/GetUserRoleIdsAsync',
+    AssignUserRolesAsync: 'api/Role/AssignUserRolesAsync',
+    GetEnabledRolesAsync: 'api/Role/GetEnabledRolesAsync',
+    GetRoleUserIdsAsync: 'api/Role/GetRoleUserIdsAsync',
+    AssignRoleUsersAsync: 'api/Role/AssignRoleUsersAsync',
   },
 };
 

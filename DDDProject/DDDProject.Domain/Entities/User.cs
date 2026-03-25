@@ -8,17 +8,17 @@ public class User : AggregateRoot
     /// <summary>
     /// 用户名
     /// </summary>
-    public string UserName { get; private set; } = string.Empty;
+    public string UserName { get;  set; } = string.Empty;
 
     /// <summary>
     /// 邮箱
     /// </summary>
-    public string Email { get; private set; } = string.Empty;
+    public string Email { get;  set; } = string.Empty;
 
     /// <summary>
     /// 手机号码
     /// </summary>
-    public string? PhoneNumber { get; private set; }
+    public string? PhoneNumber { get;  set; }
 
     /// <summary>
     /// 密码哈希
@@ -28,12 +28,12 @@ public class User : AggregateRoot
     /// <summary>
     /// 真实姓名
     /// </summary>
-    public string? RealName { get; private set; }
+    public string? RealName { get;  set; }
 
     /// <summary>
     /// 头像
     /// </summary>
-    public string? Avatar { get; private set; }
+    public string? Avatar { get;  set; }
 
     /// <summary>
     /// 用户状态：0-禁用，1-启用
@@ -53,7 +53,7 @@ public class User : AggregateRoot
     /// <summary>
     /// 备注
     /// </summary>
-    public string? Remark { get; private set; }
+    public string? Remark { get;  set; }
 
     /// <summary>
     /// 构造函数（私有，用于ORM）

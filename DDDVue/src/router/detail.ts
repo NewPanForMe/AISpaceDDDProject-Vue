@@ -19,27 +19,8 @@ const componentMap: Record<string, any> = {
     'ClearCache': ClearCache
 }
 
-// 使用 import.meta.glob 预加载所有 views/home 下的组件（按目录分组）
-const dashboardComponents = import.meta.glob('../views/home/Dashboard/*.vue', { eager: true })
-const all = import.meta.glob('../views/home.*/*.vue', { eager: true })
-const profileComponents = import.meta.glob('../views/home/Profile/*.vue', { eager: true })
-const clearCacheComponents = import.meta.glob('../views/home/ClearCache/*.vue', { eager: true })
-const menuComponents = import.meta.glob('../views/home/menu/*.vue', { eager: true })
-const settingsComponents = import.meta.glob('../views/home/Settings/*.vue', { eager: true })
-const usersComponents = import.meta.glob('../views/home/Users/*.vue', { eager: true })
-const productsComponents = import.meta.glob('../views/home/Products/*.vue', { eager: true })
-
-// 合并所有组件
-const allComponents = {
-    ...all,
-    ...dashboardComponents,
-    ...profileComponents,
-    ...clearCacheComponents,
-    ...menuComponents,
-    ...settingsComponents,
-    ...usersComponents,
-    ...productsComponents,
-}
+// 使用 import.meta.glob 预加载所有 views/home 下的组件
+const allComponents = import.meta.glob('../views/home/**/*.vue', { eager: true })
 
 // 将组件路径映射到组件实例
 const componentPathMap: Record<string, any> = {}
@@ -47,7 +28,8 @@ Object.keys(allComponents).forEach((key: string) => {
     // 移除路径前缀和 .vue 后缀
     let componentName = key.replace('../views/home/', '').replace('.vue', '')
     // 获取默认导出
-    const component = allComponents[key].default || allComponents[key]
+    const moduleDef = allComponents[key] as { default?: any }
+    const component = moduleDef.default || allComponents[key]
     componentPathMap[componentName] = component
     console.log('预加载组件:', componentName, '->', key)
 })
@@ -102,6 +84,22 @@ export const initRouteConfig = async () => {
     return routes.value
 }
 
+// 刷新路由配置（清除缓存并重新从 API 获取）
+export const refreshRoutes = async () => {
+    // 清除 localStorage 缓存
+    setItem(StorageKeys.SidebarMenu, [])
+
+    // 重新从 API 获取
+    await loadRoutesFromAPI()
+
+    // 保存到 localStorage
+    if (routes.value.length > 0) {
+        saveRoutesToStorage(routes.value)
+    }
+
+    return routes.value
+}
+
 // 导出路由配置（异步获取）
 export const getRoutes = async (): Promise<RouteConfig[]> => {
     if (routes.value.length === 0 && isLoading.value) {
@@ -113,68 +111,71 @@ export const getRoutes = async (): Promise<RouteConfig[]> => {
 // 导出加载状态
 export { isLoading }
 
-// 将路由配置转换为 Vue Router 格式
+// 将路由配置转换为 Vue Router 格式（扁平化处理）
 export const convertToRouterFormat = (routeConfigs: RouteConfig[]): any[] => {
-    return routeConfigs.map(route => {
-        // 构建组件路径（处理 component 字段）
-        let component: any = null
+    const result: any[] = []
+
+    // 递归处理路由，扁平化所有有组件的路由
+    const processRoute = (route: RouteConfig) => {
+        // 如果有组件，添加到结果中
         if (route.component && route.component.trim() !== '') {
-            // 调试：输出 component 值
+            let component: any = null
+
             console.log('原始 component 值:', route.component)
 
-            // 后端返回的 component 可能是：
-            // 1. 简单组件名（如 "Dashboard"）
-            // 2. 完整路径（如 "views/home/Dashboard/Dashboard.vue"）
-
-            const componentPath = route.component.trim()
+            // 统一将反斜杠转换为正斜杠
+            let componentPath = route.component.trim().replace(/\\/g, '/')
             console.log('转换后的componentPath:', componentPath)
 
             // 如果是完整路径，尝试转换为相对导入路径
             if (componentPath.startsWith('views/')) {
-                // 移除 "views/" 前缀
                 let relativePath = componentPath.replace(/^views\/home\//, '')
 
-                // 移除 .vue 后缀
                 if (relativePath.endsWith('.vue')) {
                     relativePath = relativePath.slice(0, -4)
                 }
 
-                // 移除 /index 后缀
                 if (relativePath.endsWith('/index')) {
                     relativePath = relativePath.slice(0, -6)
                 }
 
                 console.log('转换后的路径:', relativePath)
-
-                // 从预加载的组件中查找
                 component = componentPathMap[relativePath] || null
             } else {
-                // 简单组件名，从映射表中查找
-                component = componentMap[componentPath] || null
-                // 如果没有找到，尝试从预加载组件中查找
+                // 目录/文件格式或简单组件名，直接从预加载组件中查找
+                component = componentPathMap[componentPath] || null
+
                 if (!component) {
-                    component = componentPathMap[componentPath] || null
+                    component = componentMap[componentPath] || null
                 }
             }
 
-            // 如果组件不存在，使用 404 错误页面
             if (!component) {
                 console.warn(`未找到组件 "${componentPath}"，使用 404 错误页面`)
                 component = Error
             }
+
+            result.push({
+                path: route.path,
+                name: route.name,
+                component: component,
+                meta: {
+                    icon: route.icon,
+                    parentId: route.parentId,
+                    sortOrder: route.sortOrder,
+                    status: route.status
+                }
+            })
         }
 
-        return {
-            path: route.path,
-            name: route.name,
-            component: component,
-            icon: route.icon,
-            parentId: route.parentId,
-            sortOrder: route.sortOrder,
-            status: route.status,
-            children: route.children ? convertToRouterFormat(route.children) : undefined
+        // 递归处理子路由
+        if (route.children && route.children.length > 0) {
+            route.children.forEach(child => processRoute(child))
         }
-    })
+    }
+
+    routeConfigs.forEach(route => processRoute(route))
+    return result
 }
 
 // 导出路由配置数组（用于 router/index.ts）

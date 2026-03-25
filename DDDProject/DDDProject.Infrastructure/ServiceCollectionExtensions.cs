@@ -20,7 +20,7 @@ public static class ServiceCollectionExtensions
     {
         services.AddDbContext<ApplicationDbContext>(options =>
             options.UseSqlServer(connectionString));
-        
+
         return services;
     }
 
@@ -31,10 +31,11 @@ public static class ServiceCollectionExtensions
     {
         services.AddScoped(typeof(IRepository<,>), typeof(Infrastructure.Repositories.Repository<,>));
         services.AddScoped(typeof(IRepository<>), typeof(Infrastructure.Repositories.Repository<>));
-        
+        services.AddScoped<IUserRepository, UserRepository>();
+
         // 注册时间服务
         services.AddScoped<ITimeService, ChinaStandardTimeService>();
-        
+
         return services;
     }
 }

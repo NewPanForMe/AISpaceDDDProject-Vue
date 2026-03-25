@@ -17,7 +17,7 @@ export const StorageKeys = {
   SidebarMenu: 'sidebarMenu',
 
   // 列表数据缓存
-  // 其他列表缓存在此处添加
+  MenuList: 'menuList', // 菜单列表数据
 } as const
 
 // 定义分类类型
@@ -86,7 +86,8 @@ export const clearByCategory = (category: StorageCategory): void => {
         break
 
       case 'List':
-        // 清除列表数据缓存（预留扩展）
+        // 清除列表数据缓存
+        localStorage.removeItem(StorageKeys.MenuList)
         console.log('已清除 List 分类的缓存')
         break
 
@@ -118,8 +119,8 @@ export const getKeysByCategory = (category: StorageCategory): string[] => {
       return [StorageKeys.SidebarMenu]
 
     case 'List':
-      // 列表缓存的键名可以在这里扩展
-      return []
+      // 列表缓存的键名
+      return [StorageKeys.MenuList]
 
     case 'All':
       // 返回所有键名
@@ -160,6 +161,8 @@ export const getStorageStats = (): Record<string, number> => {
       category = 'Login'
     } else if (key === StorageKeys.SidebarMenu) {
       category = 'Menu'
+    } else if (key === StorageKeys.MenuList) {
+      category = 'List'
     } else {
       category = 'Other'
     }

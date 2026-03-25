@@ -27,7 +27,7 @@
           <el-table-column prop="sortOrder" label="排序" width="80" />
           <el-table-column prop="status" label="状态" width="100">
             <template #default="{ row }">
-              <el-tag :type="row.status === 1 ? 'success' : 'danger'">
+              <el-tag :type="row.status === 1 ? 'success' : 'danger'" effect="dark">
                 {{ row.status === 1 ? '启用' : '禁用' }}
               </el-tag>
             </template>
@@ -88,7 +88,7 @@
         </el-form-item>
         <el-form-item label="状态">
           <el-switch v-model="menuForm.status" :active-value="1" :inactive-value="0" inline-prompt active-text="启用"
-            inactive-text="禁用" />
+            inactive-text="禁用" active-color="#13ce66" inactive-color="#ff4949" />
         </el-form-item>
       </el-form>
       <template #footer>
@@ -103,11 +103,12 @@
 
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from 'vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { ElMessageBox } from 'element-plus'
 import * as menuApi from '@/api/menu'
 import type { PageParams } from '@/api/menu'
 import * as Icons from '@element-plus/icons-vue'
-import { removeItem, StorageKeys } from '@/utils/storage'
+import { removeItem, setItem, StorageKeys } from '@/utils/storage'
+import { showSuccessNotification, showErrorNotification } from '@/utils/notification'
 
 // 解构导入 API 函数
 const { getPagedMenuTree, addMenu: addMenuApi, updateMenu: updateMenuApi, deleteMenu: deleteMenuApi } = menuApi
@@ -192,11 +193,19 @@ const loadMenuData = async () => {
     if (response.data) {
       menuList.value = response.data.list || []
       pagination.value.total = response.data.total || 0
+      // 存储菜单列表数据到 localStorage (List 分类)
+      setItem(StorageKeys.MenuList, {
+        list: menuList.value,
+        total: pagination.value.total,
+        pageNum: pagination.value.pageNum,
+        pageSize: pagination.value.pageSize,
+        timestamp: Date.now()
+      })
     }
     buildTreeData()
   } catch (error) {
     console.error('加载菜单数据失败:', error)
-    ElMessage.error('加载菜单数据失败')
+    showErrorNotification({ title: '错误', message: '加载菜单数据失败' })
   }
 }
 
@@ -240,7 +249,7 @@ const deleteMenu = async (id: number) => {
     await deleteMenuApi(id.toString())
     await loadMenuData() // 重新加载数据
     await refreshSidebarMenu() // 刷新侧边栏菜单
-    ElMessage.success('删除成功')
+    showSuccessNotification({ title: '成功', message: '删除成功' })
   } catch (error) {
     console.log('取消删除或删除失败')
   }
@@ -267,12 +276,12 @@ const submitMenuForm = async () => {
     if (dialogTitle.value === '添加菜单' || dialogTitle.value === '添加子菜单') {
       // 调用API添加菜单
       await addMenuApi(menuForm.value)
-      ElMessage.success('添加成功')
+      showSuccessNotification({ title: '成功', message: '添加成功' })
     } else {
       // 调用API更新菜单
       if (menuForm.value.id) {
         await updateMenuApi(menuForm.value.id.toString(), menuForm.value)
-        ElMessage.success('编辑成功')
+        showSuccessNotification({ title: '成功', message: '编辑成功' })
       }
     }
 
@@ -291,6 +300,16 @@ const refreshSidebarMenu = async () => {
     window.location.reload()
   } catch (error) {
     console.error('刷新侧边栏菜单失败:', error)
+  }
+}
+
+// 清除菜单列表缓存
+const clearMenuListCache = () => {
+  try {
+    removeItem(StorageKeys.MenuList)
+    showSuccessNotification({ title: '成功', message: '菜单列表缓存已清除' })
+  } catch (error) {
+    console.error('清除菜单列表缓存失败:', error)
   }
 }
 

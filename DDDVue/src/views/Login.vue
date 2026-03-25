@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
 import {
   DataLine,
   Lock,
@@ -14,7 +13,7 @@ import {
 } from '@element-plus/icons-vue'
 import { http } from '../utils/http'
 import api from '../api/index'
-import { showSuccessNotification } from '../utils/notification'
+import { showSuccessNotification, showErrorNotification } from '../utils/notification'
 import { aesEncrypt } from '../utils/crypto'
 import { setItem, StorageKeys } from '@/utils/storage'
 
@@ -124,12 +123,19 @@ const handleSubmit = async () => {
       router.push('/dashboard')
     } else {
       // 登录失败
-      ElMessage.error(response.message || '登录失败，请检查用户名和密码')
+      showErrorNotification({
+        title: '登录失败',
+        message: response.message || '登录失败，请检查用户名和密码'
+      })
     }
   } catch (error: any) {
     console.error('登录错误:', error)
     const errorMessage = error?.message || '登录失败，请稍后重试'
-    ElMessage.error(errorMessage)
+    showErrorNotification({
+      title: '登录失败',
+      message: errorMessage
+    })
+
   } finally {
     loading.value = false
   }

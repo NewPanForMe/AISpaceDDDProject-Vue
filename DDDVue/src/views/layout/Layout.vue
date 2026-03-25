@@ -2,10 +2,10 @@
 import { ref, watch, onMounted, onUnmounted, markRaw } from 'vue'
 import { RouterLink, useRouter } from 'vue-router'
 import { User, Fold, Expand, Collection, Menu, Setting } from '@element-plus/icons-vue'
-import { ElMessage } from 'element-plus'
 import * as menuApi from '@/api/menu'
 import * as Icons from '@element-plus/icons-vue'
 import { getItem, setItem, removeItem, clearByCategory, StorageKeys } from '@/utils/storage'
+import { showSuccessNotification, showErrorNotification } from '@/utils/notification'
 
 // 菜单数据
 interface MenuItem {
@@ -70,7 +70,7 @@ const loadMenuTree = async () => {
     }
   } catch (error) {
     console.error('加载菜单数据失败:', error)
-    ElMessage.error('加载菜单数据失败')
+    showErrorNotification({ title: '错误', message: '加载菜单数据失败' })
   }
 }
 
@@ -135,7 +135,7 @@ const handleMenuClick = (item: MenuItem) => {
 // 退出登录
 const handleLogout = () => {
   clearByCategory('Login')
-  ElMessage.success('已退出登录')
+  showSuccessNotification({ title: '成功', message: '已退出登录' })
   router.push('/')
 }
 

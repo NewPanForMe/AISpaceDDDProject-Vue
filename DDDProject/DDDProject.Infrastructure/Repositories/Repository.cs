@@ -17,7 +17,7 @@ public class Repository<TEntity, TId> : IRepository<TEntity, TId>
     where TEntity : Entity<TId>
 {
     private readonly ApplicationDbContext _context;
-    private readonly DbSet<TEntity> _dbSet;
+    protected DbSet<TEntity> _dbSet;
 
     public Repository(ApplicationDbContext context)
     {

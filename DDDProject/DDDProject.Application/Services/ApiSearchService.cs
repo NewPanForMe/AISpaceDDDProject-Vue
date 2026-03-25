@@ -44,7 +44,7 @@ public class ApiSearchService : IApiSearchService
     {
         var apiList = GetApiSearchAttributes()
             .Where(x => string.IsNullOrEmpty(category) ||
-                   (x.Category != null && x.Category.Contains(category, StringComparison.OrdinalIgnoreCase)) ||
+                   (x.Category is not null && x.Category.Contains(category, StringComparison.OrdinalIgnoreCase)) ||
                    Enum.TryParse<ApiSearchCategory>(category, true, out var enumValue) && x.Category == enumValue.ToString())
             .ToList();
         return JsonSerializer.Serialize(apiList, new JsonSerializerOptions { WriteIndented = true });
@@ -59,9 +59,9 @@ public class ApiSearchService : IApiSearchService
     {
         var apiList = GetApiSearchAttributes()
             .Where(x => string.IsNullOrEmpty(keyword) ||
-                   (x.Name != null && x.Name.Contains(keyword, StringComparison.OrdinalIgnoreCase)) ||
-                   (x.Description != null && x.Description.Contains(keyword, StringComparison.OrdinalIgnoreCase)) ||
-                   (x.ControllerName != null && x.ControllerName.Contains(keyword, StringComparison.OrdinalIgnoreCase)))
+                   (x.Name is not null && x.Name.Contains(keyword, StringComparison.OrdinalIgnoreCase)) ||
+                   (x.Description is not null && x.Description.Contains(keyword, StringComparison.OrdinalIgnoreCase)) ||
+                   (x.ControllerName is not null && x.ControllerName.Contains(keyword, StringComparison.OrdinalIgnoreCase)))
             .ToList();
         return JsonSerializer.Serialize(apiList, new JsonSerializerOptions { WriteIndented = true });
     }
@@ -98,7 +98,7 @@ public class ApiSearchService : IApiSearchService
             {
                 // 获取方法上的ApiSearch注解
                 var apiSearchAttr = method.GetCustomAttribute<ApiSearchAttribute>();
-                if (apiSearchAttr == null)
+                if (apiSearchAttr is null)
                 {
                     continue;
                 }
@@ -175,7 +175,7 @@ public class ApiSearchService : IApiSearchService
                 // 获取方法上的ApiSearch注解
                 var apiSearchAttr = method.GetCustomAttribute<ApiSearchAttribute>();
                 var methodName = method.Name;
-                if (apiSearchAttr == null)
+                if (apiSearchAttr is null)
                 {
                     continue;
                 }
@@ -194,11 +194,11 @@ public class ApiSearchService : IApiSearchService
     /// </summary>
     private string GetHttpMethodName(MethodInfo method)
     {
-        if (method.GetCustomAttribute<HttpGetAttribute>() != null) return "GET";
-        if (method.GetCustomAttribute<HttpPostAttribute>() != null) return "POST";
-        if (method.GetCustomAttribute<HttpPutAttribute>() != null) return "PUT";
-        if (method.GetCustomAttribute<HttpDeleteAttribute>() != null) return "DELETE";
-        if (method.GetCustomAttribute<HttpPatchAttribute>() != null) return "PATCH";
+        if (method.GetCustomAttribute<HttpGetAttribute>() is not null) return "GET";
+        if (method.GetCustomAttribute<HttpPostAttribute>() is not null) return "POST";
+        if (method.GetCustomAttribute<HttpPutAttribute>() is not null) return "PUT";
+        if (method.GetCustomAttribute<HttpDeleteAttribute>() is not null) return "DELETE";
+        if (method.GetCustomAttribute<HttpPatchAttribute>() is not null) return "PATCH";
         return "UNKNOWN";
     }
 }

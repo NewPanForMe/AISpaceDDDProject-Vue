@@ -35,7 +35,7 @@ public class MenuConfiguration : IEntityTypeConfiguration<Menu>
             .HasDefaultValueSql("GETDATE()"); // 使用服务器本地时间
 
         builder.Property(e => e.UpdatedAt)
-            .IsRequired(false);
+            .IsRequired();
 
         // 配置父子关系
         builder.HasOne(m => m.Parent)

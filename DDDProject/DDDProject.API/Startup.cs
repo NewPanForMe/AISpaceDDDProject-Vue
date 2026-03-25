@@ -108,9 +108,10 @@ namespace DDDProject.API
                     context.Database.Migrate();
 
                     // 初始化种子数据
+                    context.SeedRoles();
                     context.SeedUsers();
                     context.SeedMenus();
-                    logger.LogInformation("数据库初始化完成，用户表和菜单表已同步并创建了初始数据。");
+                    logger.LogInformation("数据库初始化完成，角色表、用户表和菜单表已同步并创建了初始数据。");
                 }
                 catch (Exception ex)
                 {

@@ -17,6 +17,10 @@ public interface IMenuService : IApplicationService
 
 
     /// <summary>
+    /// 获取分页的树形菜单数据（用于大数据量场景）
+    /// </summary>
+    Task<ApiRequestResult> GetPagedTreeMenusAsync(PagedRequest request);
+    /// <summary>
     /// 获取路由配置（用于前端动态路由）
     /// </summary>
     Task<ApiRequestResult> GetRoutesAsync();

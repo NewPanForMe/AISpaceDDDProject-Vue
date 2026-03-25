@@ -32,6 +32,21 @@ public class ApplicationDbContext : DbContext
     /// </summary>
     public DbSet<Menu> Menus => Set<Menu>();
 
+    /// <summary>
+    /// 角色集合
+    /// </summary>
+    public DbSet<Role> Roles => Set<Role>();
+
+    /// <summary>
+    /// 用户角色关联集合
+    /// </summary>
+    public DbSet<UserRole> UserRoles => Set<UserRole>();
+
+    /// <summary>
+    /// 菜单角色关联集合
+    /// </summary>
+    public DbSet<MenuRole> MenuRoles => Set<MenuRole>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -52,5 +67,14 @@ public class ApplicationDbContext : DbContext
 
         // 配置菜单实体
         modelBuilder.ApplyConfiguration(new MenuConfiguration());
+
+        // 配置角色实体
+        modelBuilder.ApplyConfiguration(new RoleConfiguration());
+
+        // 配置用户角色关联实体
+        modelBuilder.ApplyConfiguration(new UserRoleConfiguration());
+
+        // 配置菜单角色关联实体
+        modelBuilder.ApplyConfiguration(new MenuRoleConfiguration());
     }
 }

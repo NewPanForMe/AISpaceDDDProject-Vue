@@ -44,8 +44,8 @@
 import { ref, onMounted } from 'vue'
 import { Setting, User, Menu, DataLine } from '@element-plus/icons-vue'
 import { useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
 import { clearByCategory, getStorageStats, StorageKeys } from '@/utils/storage'
+import { showSuccessNotification } from '@/utils/notification'
 
 const router = useRouter()
 const showStats = ref(false)
@@ -60,21 +60,21 @@ const updateStats = () => {
 // 清除所有缓存
 const clearAllCache = () => {
   clearByCategory('All')
-  ElMessage.success('所有缓存已清理')
+  showSuccessNotification({ title: '成功', message: '所有缓存已清理' })
   setTimeout(() => { window.location.href = '/' }, 1500)
 }
 
 // 退出登录
 const handleLogout = () => {
   clearByCategory('Login')
-  ElMessage.success('已退出登录')
+  showSuccessNotification({ title: '成功', message: '已退出登录' })
   setTimeout(() => { router.push('/') }, 1500)
 }
 
 // 清理列表缓存
 const clearMenuCache = () => {
   clearByCategory('Menu')
-  ElMessage.success('列表缓存已清理')
+  showSuccessNotification({ title: '成功', message: '列表缓存已清理' })
   setTimeout(() => { window.location.reload() }, 1500)
 }
 
@@ -89,7 +89,7 @@ const clearCategory = (category: 'Login' | 'Menu' | 'List' | 'All') => {
     All: '所有缓存已清除'
   }
 
-  ElMessage.success(messages[category])
+  showSuccessNotification({ title: '成功', message: messages[category] })
 
   // 如果清除的是登录缓存，延迟跳转
   if (category === 'Login') {

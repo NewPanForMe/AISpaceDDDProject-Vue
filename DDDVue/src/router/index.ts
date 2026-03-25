@@ -34,6 +34,11 @@ const createDynamicRouter = async () => {
           ...routerFormatRoutes,
           // 固定路由：系统页面
           {
+              path: 'user-role',
+              name: 'user-role',
+              component: () => import('../views/home/UserRole/UserRole.vue')
+          },
+          {
               path: 'profile',
               name: 'profile',
               component: () => import('../views/home/Profile/Profile.vue')

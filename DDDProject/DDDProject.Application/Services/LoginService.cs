@@ -62,7 +62,7 @@ public class LoginService : ILoginService
         var users = await _userRepository.GetListAsync(u => u.UserName == request.UserName && u.PasswordHash == passwordHash);
         var user = await Task.Run(() => users.FirstOrDefault());
 
-        if (user == null)
+        if (user is null)
         {
             return new ApiRequestResult
             {
@@ -71,11 +71,24 @@ public class LoginService : ILoginService
             };
         }
 
+        // 检查用户状态
+        if (user.Status == 0)
+        {
+            return new ApiRequestResult
+            {
+                Success = false,
+                Message = "该账号已被禁用，请联系管理员"
+            };
+        }
+
         // 创建 Token
         var token = await CreateJwtTokenAsync(user);
 
         // 更新登录信息
         user.UpdateLoginInfo(GetClientIpAddress());
+        
+        // 保存到数据库
+        await _userRepository.UpdateAsync(user);
 
         return new ApiRequestResult
         {

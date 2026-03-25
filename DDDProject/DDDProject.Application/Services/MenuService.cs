@@ -47,6 +47,61 @@ public class MenuService : IMenuService
         }
     }
 
+    /// <summary>
+    /// 获取分页的树形菜单数据（用于大数据量场景）
+    /// </summary>
+    public async Task<ApiRequestResult> GetPagedTreeMenusAsync(PagedRequest request)
+    {
+        try
+        {
+            var allMenus = new List<Menu>();
+            var currentPage = request.PageNumber;
+
+            // 循环分页获取所有数据
+            while (true)
+            {
+                var menus = await _menuRepository.GetListAsync(
+                    m => true,
+                    q => q.OrderBy(x => x.SortOrder),
+                    (currentPage - 1) * request.PageSize,
+                    request.PageSize
+                );
+
+                if (!menus.Any()) break;
+
+                allMenus.AddRange(menus);
+
+                if (menus.Count() < request.PageSize) break;
+                currentPage++;
+            }
+
+            // 构建树形结构（包含禁用的菜单）
+            var menuDtos = BuildTreeMenuWithDisabled(allMenus);
+
+            return new ApiRequestResult
+            {
+                Success = true,
+                Message = "操作成功",
+                Data = new
+                {
+                    List = menuDtos,
+                    Total = allMenus.Count,
+                    PageNumber = request.PageNumber,
+                    PageSize = request.PageSize
+                }
+            };
+        }
+        catch (Exception ex)
+        {
+            return new ApiRequestResult
+            {
+                Success = false,
+                Message = $"获取分页树形菜单失败: {ex.Message}",
+                Data = null
+            };
+        }
+    }
+
 
 
     /// <summary>
@@ -58,7 +113,7 @@ public class MenuService : IMenuService
         {
             // 验证菜单名称是否已存在
             var existingMenu = await _menuRepository.GetFirstAsync(m => m.Name == menuDto.Name && m.ParentId == menuDto.ParentId);
-            if (existingMenu != null)
+            if (existingMenu is not null)
             {
                 return new ApiRequestResult
                 {
@@ -182,7 +237,7 @@ public class MenuService : IMenuService
         try
         {
             var menu = await _menuRepository.FindAsync(id);
-            if (menu == null)
+            if (menu is null)
             {
                 return new ApiRequestResult
                 {
@@ -233,7 +288,7 @@ public class MenuService : IMenuService
         try
         {
             var menu = await _menuRepository.FindAsync(id);
-            if (menu == null)
+            if (menu is null)
             {
                 return new ApiRequestResult
                 {
@@ -273,7 +328,7 @@ public class MenuService : IMenuService
         try
         {
             var menu = await _menuRepository.FindAsync(id);
-            if (menu == null)
+            if (menu is null)
             {
                 return new ApiRequestResult
                 {
@@ -340,12 +395,55 @@ public class MenuService : IMenuService
     }
 
     /// <summary>
+    /// 构建树形菜单结构（用于列表显示，包含禁用的菜单）
+    /// </summary>
+    private List<MenuDto> BuildTreeMenuWithDisabled(List<Menu> allMenus)
+    {
+        // 获取根节点（包含所有菜单）
+        var rootMenus = allMenus.Where(m => m.ParentId is null || m.ParentId == Guid.Empty)
+                               .OrderBy(m => m.SortOrder)
+                               .ToList();
+
+        var result = new List<MenuDto>();
+
+        foreach (var menu in rootMenus)
+        {
+            var menuDto = BuildMenuDtoWithDisabled(menu, allMenus);
+            result.Add(menuDto);
+        }
+
+        return result;
+    }
+
+    /// <summary>
+    /// 递归构建菜单 DTO（包含禁用的菜单）
+    /// </summary>
+    private MenuDto BuildMenuDtoWithDisabled(Menu menu, List<Menu> allMenus)
+    {
+        // 获取所有子菜单（包含禁用的）
+        var children = allMenus.Where(m => m.ParentId == menu.Id).OrderBy(m => m.SortOrder).ToList();
+
+        return new MenuDto
+        {
+            Id = menu.Id,
+            Name = menu.Name,
+            Path = menu.Path,
+            Component = menu.Component,
+            Icon = menu.Icon,
+            ParentId = menu.ParentId,
+            SortOrder = menu.SortOrder,
+            Status = menu.Status,
+            Children = children.Any() ? children.Select(m => BuildMenuDtoWithDisabled(m, allMenus)).ToList() : new List<MenuDto>()
+        };
+    }
+
+    /// <summary>
     /// 构建树形菜单结构
     /// </summary>
     private List<MenuDto> BuildTreeMenu(List<Menu> allMenus)
     {
         // 获取根节点（只包含启用的菜单）
-        var rootMenus = allMenus.Where(m => (m.ParentId == null || m.ParentId == Guid.Empty) && m.Status == 1)
+        var rootMenus = allMenus.Where(m => (m.ParentId is null || m.ParentId == Guid.Empty) && m.Status == 1)
                                .OrderBy(m => m.SortOrder)
                                .ToList();
 
@@ -419,7 +517,7 @@ public class MenuService : IMenuService
     private List<RouteConfig> BuildRouteConfigs(List<Menu> allMenus)
     {
         // 获取根节点（只包含启用的菜单）
-        var rootMenus = allMenus.Where(m => (m.ParentId == null || m.ParentId == Guid.Empty) && m.Status == 1)
+        var rootMenus = allMenus.Where(m => (m.ParentId is null || m.ParentId == Guid.Empty) && m.Status == 1)
                                .OrderBy(m => m.SortOrder)
                                .ToList();
 

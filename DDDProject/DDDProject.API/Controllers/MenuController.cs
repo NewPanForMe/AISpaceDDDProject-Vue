@@ -106,4 +106,20 @@ public class MenuController : BaseApiController
         return await _menuService.DisableMenuAsync(id);
     }
 
+
+    /// <summary>
+    /// 获取分页的树形菜单数据（用于大数据量场景）
+    /// </summary>
+    [HttpGet]
+    [ActionName("GetPagedTreeMenusAsync")]
+    [ApiSearch(Name = "获取分页树形菜单", Description = "分页获取树形菜单数据，适用于大数据量场景", Category = ApiSearchCategory.Menu)]
+    public async Task<ApiRequestResult> GetPagedTreeMenusAsync([FromQuery] int pageNum = 1, [FromQuery] int pageSize = 1000)
+    {
+        var request = new PagedRequest
+        {
+            PageNumber = pageNum,
+            PageSize = pageSize
+        };
+        return await _menuService.GetPagedTreeMenusAsync(request);
+    }
 }
