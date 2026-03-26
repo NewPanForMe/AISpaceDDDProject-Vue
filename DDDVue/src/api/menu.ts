@@ -46,12 +46,12 @@ export const getRoutes = () => {
 
 // 获取分页菜单树（用于大数据量）
 export const getPagedMenuTree = (params?: PageParams) => {
-  return http.get<PagedResult<MenuTree[]>>(api.Menu.GetPagedTreeMenusAsync, { params })
+  return http.get<PagedResult<MenuTree>>(api.Menu.GetPagedTreeMenusAsync, { params })
 }
 
 // 获取扁平菜单列表（用于需要手动构建树形结构的场景）
 export const getMenuListFlat = (params?: PageParams) => {
-  return http.get<PagedResult<MenuTree[]>>(api.Menu.GetMenusAsync, { params })
+  return http.get<PagedResult<MenuTree>>(api.Menu.GetMenusAsync, { params })
 }
 
 // 获取菜单列表（分页）

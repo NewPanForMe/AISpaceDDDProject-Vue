@@ -728,3 +728,836 @@ public class RoleService : IRoleService
         }
     }
 }
+
+/// <summary>
+/// 系统设置应用服务实现
+/// </summary>
+public class SettingService : ISettingService
+{
+    private readonly IRepository<Setting> _settingRepository;
+
+    public SettingService(IRepository<Setting> settingRepository)
+    {
+        _settingRepository = settingRepository;
+    }
+
+    /// <summary>
+    /// 获取所有设置
+    /// </summary>
+    public async Task<ApiRequestResult> GetAllSettingsAsync()
+    {
+        try
+        {
+            var settings = await _settingRepository.GetListAsync(s => true);
+            var dtos = settings.Select(s => new SettingDto
+            {
+                Id = s.Id,
+                Key = s.Key,
+                Value = s.Value,
+                Description = s.Description,
+                Group = s.Group,
+                CreatedAt = s.CreatedAt,
+                UpdatedAt = s.UpdatedAt
+            }).ToList();
+
+            return new ApiRequestResult
+            {
+                Success = true,
+                Message = "操作成功",
+                Data = dtos
+            };
+        }
+        catch (Exception ex)
+        {
+            return new ApiRequestResult
+            {
+                Success = false,
+                Message = $"获取设置列表失败: {ex.Message}",
+                Data = null
+            };
+        }
+    }
+
+    /// <summary>
+    /// 根据分组获取设置
+    /// </summary>
+    public async Task<ApiRequestResult> GetSettingsByGroupAsync(string group)
+    {
+        try
+        {
+            var settings = await _settingRepository.GetListAsync(s => s.Group == group);
+            var dtos = settings.Select(s => new SettingDto
+            {
+                Id = s.Id,
+                Key = s.Key,
+                Value = s.Value,
+                Description = s.Description,
+                Group = s.Group,
+                CreatedAt = s.CreatedAt,
+                UpdatedAt = s.UpdatedAt
+            }).ToList();
+
+            return new ApiRequestResult
+            {
+                Success = true,
+                Message = "操作成功",
+                Data = dtos
+            };
+        }
+        catch (Exception ex)
+        {
+            return new ApiRequestResult
+            {
+                Success = false,
+                Message = $"获取设置列表失败: {ex.Message}",
+                Data = null
+            };
+        }
+    }
+
+    /// <summary>
+    /// 根据键获取设置值
+    /// </summary>
+    public async Task<ApiRequestResult> GetSettingByKeyAsync(string key)
+    {
+        try
+        {
+            var setting = await _settingRepository.GetFirstAsync(s => s.Key == key);
+            if (setting is null)
+            {
+                return new ApiRequestResult
+                {
+                    Success = false,
+                    Message = "设置项不存在",
+                    Data = null
+                };
+            }
+
+            var dto = new SettingDto
+            {
+                Id = setting.Id,
+                Key = setting.Key,
+                Value = setting.Value,
+                Description = setting.Description,
+                Group = setting.Group,
+                CreatedAt = setting.CreatedAt,
+                UpdatedAt = setting.UpdatedAt
+            };
+
+            return new ApiRequestResult
+            {
+                Success = true,
+                Message = "操作成功",
+                Data = dto
+            };
+        }
+        catch (Exception ex)
+        {
+            return new ApiRequestResult
+            {
+                Success = false,
+                Message = $"获取设置失败: {ex.Message}",
+                Data = null
+            };
+        }
+    }
+
+    /// <summary>
+    /// 更新单个设置
+    /// </summary>
+    public async Task<ApiRequestResult> UpdateSettingAsync(UpdateSettingRequest request)
+    {
+        try
+        {
+            var setting = await _settingRepository.GetFirstAsync(s => s.Key == request.Key);
+            if (setting is null)
+            {
+                // 如果设置不存在，创建新的设置项
+                setting = Setting.Create(request.Key, request.Value);
+                await _settingRepository.AddAsync(setting);
+            }
+            else
+            {
+                setting.UpdateValue(request.Value);
+                _settingRepository.Update(setting);
+            }
+
+            await _settingRepository.SaveChangesAsync();
+
+            return new ApiRequestResult
+            {
+                Success = true,
+                Message = "更新成功",
+                Data = null
+            };
+        }
+        catch (Exception ex)
+        {
+            return new ApiRequestResult
+            {
+                Success = false,
+                Message = $"更新设置失败: {ex.Message}",
+                Data = null
+            };
+        }
+    }
+
+    /// <summary>
+    /// 批量更新设置
+    /// </summary>
+    public async Task<ApiRequestResult> BatchUpdateSettingsAsync(BatchUpdateSettingsRequest request)
+    {
+        try
+        {
+            foreach (var item in request.Settings)
+            {
+                var setting = await _settingRepository.GetFirstAsync(s => s.Key == item.Key);
+                if (setting is null)
+                {
+                    setting = Setting.Create(item.Key, item.Value);
+                    await _settingRepository.AddAsync(setting);
+                }
+                else
+                {
+                    setting.UpdateValue(item.Value);
+                    _settingRepository.Update(setting);
+                }
+            }
+
+            await _settingRepository.SaveChangesAsync();
+
+            return new ApiRequestResult
+            {
+                Success = true,
+                Message = "批量更新成功",
+                Data = null
+            };
+        }
+        catch (Exception ex)
+        {
+            return new ApiRequestResult
+            {
+                Success = false,
+                Message = $"批量更新设置失败: {ex.Message}",
+                Data = null
+            };
+        }
+    }
+}
+
+/// <summary>
+/// 权限应用服务实现
+/// </summary>
+public class PermissionService : IPermissionService
+{
+    private readonly IRepository<Permission> _permissionRepository;
+    private readonly IRepository<RolePermission> _rolePermissionRepository;
+    private readonly IRepository<UserRole> _userRoleRepository;
+
+    public PermissionService(
+        IRepository<Permission> permissionRepository,
+        IRepository<RolePermission> rolePermissionRepository,
+        IRepository<UserRole> userRoleRepository)
+    {
+        _permissionRepository = permissionRepository;
+        _rolePermissionRepository = rolePermissionRepository;
+        _userRoleRepository = userRoleRepository;
+    }
+
+    /// <summary>
+    /// 获取权限列表（分页）
+    /// </summary>
+    public async Task<ApiRequestResult> GetPermissionsAsync(PagedRequest request)
+    {
+        try
+        {
+            var skipCount = (request.PageNumber - 1) * request.PageSize;
+            var total = await _permissionRepository.CountAsync(p => true);
+            var permissions = await _permissionRepository.GetListAsync(
+                p => true,
+                q => q.OrderBy(p => p.Module).ThenBy(p => p.SortOrder),
+                skipCount,
+                request.PageSize
+            );
+
+            var dtos = permissions.Select(p => new PermissionDto
+            {
+                Id = p.Id,
+                Code = p.Code,
+                Name = p.Name,
+                Description = p.Description,
+                Module = p.Module,
+                MenuId = p.MenuId,
+                SortOrder = p.SortOrder,
+                Status = p.Status,
+                CreatedAt = p.CreatedAt,
+                UpdatedAt = p.UpdatedAt
+            }).ToList();
+
+            var pagedResult = new PagedResult<PermissionDto>
+            {
+                List = dtos,
+                Total = total,
+                PageNumber = request.PageNumber,
+                PageSize = request.PageSize
+            };
+
+            return new ApiRequestResult
+            {
+                Success = true,
+                Message = "操作成功",
+                Data = pagedResult
+            };
+        }
+        catch (Exception ex)
+        {
+            return new ApiRequestResult
+            {
+                Success = false,
+                Message = $"获取权限列表失败: {ex.Message}",
+                Data = null
+            };
+        }
+    }
+
+    /// <summary>
+    /// 获取所有启用的权限列表
+    /// </summary>
+    public async Task<ApiRequestResult> GetAllEnabledPermissionsAsync()
+    {
+        try
+        {
+            var permissions = await _permissionRepository.GetListAsync(p => p.Status == 1);
+            var dtos = permissions.Select(p => new PermissionDto
+            {
+                Id = p.Id,
+                Code = p.Code,
+                Name = p.Name,
+                Description = p.Description,
+                Module = p.Module,
+                MenuId = p.MenuId,
+                SortOrder = p.SortOrder,
+                Status = p.Status,
+                CreatedAt = p.CreatedAt,
+                UpdatedAt = p.UpdatedAt
+            }).ToList();
+
+            return new ApiRequestResult
+            {
+                Success = true,
+                Message = "操作成功",
+                Data = dtos
+            };
+        }
+        catch (Exception ex)
+        {
+            return new ApiRequestResult
+            {
+                Success = false,
+                Message = $"获取权限列表失败: {ex.Message}",
+                Data = null
+            };
+        }
+    }
+
+    /// <summary>
+    /// 根据模块获取权限列表
+    /// </summary>
+    public async Task<ApiRequestResult> GetPermissionsByModuleAsync(string module)
+    {
+        try
+        {
+            var permissions = await _permissionRepository.GetListAsync(p => p.Module == module && p.Status == 1);
+            var dtos = permissions.Select(p => new PermissionDto
+            {
+                Id = p.Id,
+                Code = p.Code,
+                Name = p.Name,
+                Description = p.Description,
+                Module = p.Module,
+                MenuId = p.MenuId,
+                SortOrder = p.SortOrder,
+                Status = p.Status,
+                CreatedAt = p.CreatedAt,
+                UpdatedAt = p.UpdatedAt
+            }).ToList();
+
+            return new ApiRequestResult
+            {
+                Success = true,
+                Message = "操作成功",
+                Data = dtos
+            };
+        }
+        catch (Exception ex)
+        {
+            return new ApiRequestResult
+            {
+                Success = false,
+                Message = $"获取权限列表失败: {ex.Message}",
+                Data = null
+            };
+        }
+    }
+
+    /// <summary>
+    /// 获取权限详情
+    /// </summary>
+    public async Task<ApiRequestResult> GetPermissionByIdAsync(Guid id)
+    {
+        try
+        {
+            var permission = await _permissionRepository.FindAsync(id);
+            if (permission is null)
+            {
+                return new ApiRequestResult
+                {
+                    Success = false,
+                    Message = "权限不存在",
+                    Data = null
+                };
+            }
+
+            var dto = new PermissionDto
+            {
+                Id = permission.Id,
+                Code = permission.Code,
+                Name = permission.Name,
+                Description = permission.Description,
+                Module = permission.Module,
+                MenuId = permission.MenuId,
+                SortOrder = permission.SortOrder,
+                Status = permission.Status,
+                CreatedAt = permission.CreatedAt,
+                UpdatedAt = permission.UpdatedAt
+            };
+
+            return new ApiRequestResult
+            {
+                Success = true,
+                Message = "操作成功",
+                Data = dto
+            };
+        }
+        catch (Exception ex)
+        {
+            return new ApiRequestResult
+            {
+                Success = false,
+                Message = $"获取权限详情失败: {ex.Message}",
+                Data = null
+            };
+        }
+    }
+
+    /// <summary>
+    /// 创建权限
+    /// </summary>
+    public async Task<ApiRequestResult> CreatePermissionAsync(CreatePermissionRequest request)
+    {
+        try
+        {
+            // 检查权限编码是否存在
+            var existingPermission = await _permissionRepository.GetFirstAsync(p => p.Code == request.Code);
+            if (existingPermission is not null)
+            {
+                return new ApiRequestResult
+                {
+                    Success = false,
+                    Message = "权限编码已存在",
+                    Data = null
+                };
+            }
+
+            var permission = Permission.Create(
+                request.Code,
+                request.Name,
+                request.Module,
+                request.Description,
+                request.MenuId,
+                request.SortOrder
+            );
+
+            await _permissionRepository.AddAsync(permission);
+            await _permissionRepository.SaveChangesAsync();
+
+            return new ApiRequestResult
+            {
+                Success = true,
+                Message = "创建成功",
+                Data = permission.Id
+            };
+        }
+        catch (Exception ex)
+        {
+            return new ApiRequestResult
+            {
+                Success = false,
+                Message = $"创建权限失败: {ex.Message}",
+                Data = null
+            };
+        }
+    }
+
+    /// <summary>
+    /// 更新权限
+    /// </summary>
+    public async Task<ApiRequestResult> UpdatePermissionAsync(UpdatePermissionRequest request)
+    {
+        try
+        {
+            var permission = await _permissionRepository.FindAsync(request.Id);
+            if (permission is null)
+            {
+                return new ApiRequestResult
+                {
+                    Success = false,
+                    Message = "权限不存在",
+                    Data = null
+                };
+            }
+
+            permission.Update(request.Name, request.Description, request.SortOrder);
+            _permissionRepository.Update(permission);
+            await _permissionRepository.SaveChangesAsync();
+
+            return new ApiRequestResult
+            {
+                Success = true,
+                Message = "更新成功",
+                Data = permission.Id
+            };
+        }
+        catch (Exception ex)
+        {
+            return new ApiRequestResult
+            {
+                Success = false,
+                Message = $"更新权限失败: {ex.Message}",
+                Data = null
+            };
+        }
+    }
+
+    /// <summary>
+    /// 删除权限
+    /// </summary>
+    public async Task<ApiRequestResult> DeletePermissionAsync(Guid id)
+    {
+        try
+        {
+            var permission = await _permissionRepository.FindAsync(id);
+            if (permission is null)
+            {
+                return new ApiRequestResult
+                {
+                    Success = false,
+                    Message = "权限不存在",
+                    Data = null
+                };
+            }
+
+            // 删除相关的角色权限关联
+            var rolePermissions = await _rolePermissionRepository.GetListAsync(rp => rp.PermissionId == id);
+            foreach (var rp in rolePermissions)
+            {
+                _rolePermissionRepository.Remove(rp);
+            }
+
+            _permissionRepository.Remove(permission);
+            await _permissionRepository.SaveChangesAsync();
+
+            return new ApiRequestResult
+            {
+                Success = true,
+                Message = "删除成功",
+                Data = null
+            };
+        }
+        catch (Exception ex)
+        {
+            return new ApiRequestResult
+            {
+                Success = false,
+                Message = $"删除权限失败: {ex.Message}",
+                Data = null
+            };
+        }
+    }
+
+    /// <summary>
+    /// 启用权限
+    /// </summary>
+    public async Task<ApiRequestResult> EnablePermissionAsync(Guid id)
+    {
+        try
+        {
+            var permission = await _permissionRepository.FindAsync(id);
+            if (permission is null)
+            {
+                return new ApiRequestResult
+                {
+                    Success = false,
+                    Message = "权限不存在",
+                    Data = null
+                };
+            }
+
+            permission.Enable();
+            _permissionRepository.Update(permission);
+            await _permissionRepository.SaveChangesAsync();
+
+            return new ApiRequestResult
+            {
+                Success = true,
+                Message = "启用成功",
+                Data = null
+            };
+        }
+        catch (Exception ex)
+        {
+            return new ApiRequestResult
+            {
+                Success = false,
+                Message = $"启用权限失败: {ex.Message}",
+                Data = null
+            };
+        }
+    }
+
+    /// <summary>
+    /// 禁用权限
+    /// </summary>
+    public async Task<ApiRequestResult> DisablePermissionAsync(Guid id)
+    {
+        try
+        {
+            var permission = await _permissionRepository.FindAsync(id);
+            if (permission is null)
+            {
+                return new ApiRequestResult
+                {
+                    Success = false,
+                    Message = "权限不存在",
+                    Data = null
+                };
+            }
+
+            permission.Disable();
+            _permissionRepository.Update(permission);
+            await _permissionRepository.SaveChangesAsync();
+
+            return new ApiRequestResult
+            {
+                Success = true,
+                Message = "禁用成功",
+                Data = null
+            };
+        }
+        catch (Exception ex)
+        {
+            return new ApiRequestResult
+            {
+                Success = false,
+                Message = $"禁用权限失败: {ex.Message}",
+                Data = null
+            };
+        }
+    }
+
+    /// <summary>
+    /// 获取角色的权限ID列表
+    /// </summary>
+    public async Task<ApiRequestResult> GetRolePermissionIdsAsync(Guid roleId)
+    {
+        try
+        {
+            var rolePermissions = await _rolePermissionRepository.GetListAsync(rp => rp.RoleId == roleId);
+            var permissionIds = rolePermissions.Select(rp => rp.PermissionId).ToList();
+
+            return new ApiRequestResult
+            {
+                Success = true,
+                Message = "获取角色权限成功",
+                Data = permissionIds
+            };
+        }
+        catch (Exception ex)
+        {
+            return new ApiRequestResult
+            {
+                Success = false,
+                Message = $"获取角色权限失败: {ex.Message}",
+                Data = null
+            };
+        }
+    }
+
+    /// <summary>
+    /// 为角色分配权限
+    /// </summary>
+    public async Task<ApiRequestResult> AssignRolePermissionsAsync(Guid roleId, List<Guid> permissionIds)
+    {
+        try
+        {
+            // 获取角色现有的权限关联
+            var existingRolePermissions = await _rolePermissionRepository.GetListAsync(rp => rp.RoleId == roleId);
+            var existingPermissionIds = existingRolePermissions.Select(rp => rp.PermissionId).ToList();
+
+            // 需要删除的权限
+            var permissionIdsToRemove = existingPermissionIds.Except(permissionIds).ToList();
+            // 需要添加的权限
+            var permissionIdsToAdd = permissionIds.Except(existingPermissionIds).ToList();
+
+            // 删除不再需要的权限关联
+            foreach (var permissionId in permissionIdsToRemove)
+            {
+                var rolePermission = existingRolePermissions.FirstOrDefault(rp => rp.PermissionId == permissionId);
+                if (rolePermission is not null)
+                {
+                    _rolePermissionRepository.Remove(rolePermission);
+                }
+            }
+
+            // 添加新的权限关联
+            foreach (var permissionId in permissionIdsToAdd)
+            {
+                var rolePermission = RolePermission.Create(roleId, permissionId);
+                await _rolePermissionRepository.AddAsync(rolePermission);
+            }
+
+            await _rolePermissionRepository.SaveChangesAsync();
+
+            return new ApiRequestResult
+            {
+                Success = true,
+                Message = "分配权限成功",
+                Data = null
+            };
+        }
+        catch (Exception ex)
+        {
+            return new ApiRequestResult
+            {
+                Success = false,
+                Message = $"分配权限失败: {ex.Message}",
+                Data = null
+            };
+        }
+    }
+
+    /// <summary>
+    /// 获取用户的权限列表（通过角色）
+    /// </summary>
+    public async Task<ApiRequestResult> GetUserPermissionsAsync(Guid userId)
+    {
+        try
+        {
+            // 获取用户的所有角色
+            var userRoles = await _userRoleRepository.GetListAsync(ur => ur.UserId == userId);
+            var roleIds = userRoles.Select(ur => ur.RoleId).ToList();
+
+            if (roleIds.Count == 0)
+            {
+                return new ApiRequestResult
+                {
+                    Success = true,
+                    Message = "用户无角色",
+                    Data = new List<PermissionDto>()
+                };
+            }
+
+            // 获取角色的所有权限ID
+            var rolePermissions = await _rolePermissionRepository.GetListAsync(rp => roleIds.Contains(rp.RoleId));
+            var permissionIds = rolePermissions.Select(rp => rp.PermissionId).Distinct().ToList();
+
+            // 获取权限详情
+            var permissions = await _permissionRepository.GetListAsync(p => permissionIds.Contains(p.Id) && p.Status == 1);
+            var dtos = permissions.Select(p => new PermissionDto
+            {
+                Id = p.Id,
+                Code = p.Code,
+                Name = p.Name,
+                Description = p.Description,
+                Module = p.Module,
+                MenuId = p.MenuId,
+                SortOrder = p.SortOrder,
+                Status = p.Status,
+                CreatedAt = p.CreatedAt,
+                UpdatedAt = p.UpdatedAt
+            }).ToList();
+
+            return new ApiRequestResult
+            {
+                Success = true,
+                Message = "获取用户权限成功",
+                Data = dtos
+            };
+        }
+        catch (Exception ex)
+        {
+            return new ApiRequestResult
+            {
+                Success = false,
+                Message = $"获取用户权限失败: {ex.Message}",
+                Data = null
+            };
+        }
+    }
+
+    /// <summary>
+    /// 检查用户是否有指定权限
+    /// </summary>
+    public async Task<ApiRequestResult> HasPermissionAsync(Guid userId, string permissionCode)
+    {
+        try
+        {
+            // 获取用户的所有角色
+            var userRoles = await _userRoleRepository.GetListAsync(ur => ur.UserId == userId);
+            var roleIds = userRoles.Select(ur => ur.RoleId).ToList();
+
+            if (roleIds.Count == 0)
+            {
+                return new ApiRequestResult
+                {
+                    Success = true,
+                    Message = "检查完成",
+                    Data = false
+                };
+            }
+
+            // 获取权限
+            var permission = await _permissionRepository.GetFirstAsync(p => p.Code == permissionCode && p.Status == 1);
+            if (permission is null)
+            {
+                return new ApiRequestResult
+                {
+                    Success = true,
+                    Message = "权限不存在",
+                    Data = false
+                };
+            }
+
+            // 检查角色是否有该权限
+            var hasPermission = await _rolePermissionRepository.GetFirstAsync(
+                rp => roleIds.Contains(rp.RoleId) && rp.PermissionId == permission.Id
+            );
+
+            return new ApiRequestResult
+            {
+                Success = true,
+                Message = "检查完成",
+                Data = hasPermission is not null
+            };
+        }
+        catch (Exception ex)
+        {
+            return new ApiRequestResult
+            {
+                Success = false,
+                Message = $"检查权限失败: {ex.Message}",
+                Data = false
+            };
+        }
+    }
+}

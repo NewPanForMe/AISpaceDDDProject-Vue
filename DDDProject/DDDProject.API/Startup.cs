@@ -76,6 +76,9 @@ namespace DDDProject.API
                 bearer.RequireHttpsMetadata = false; // 在开发环境中可以设为false
                 bearer.SaveToken = true;
 
+                // 禁用 claims 映射，保留原始 JWT claim 名称
+                bearer.MapInboundClaims = false;
+
                 bearer.TokenValidationParameters = new TokenValidationParameters
                 {
                     ValidateIssuerSigningKey = true,
@@ -91,6 +94,7 @@ namespace DDDProject.API
 
             services.AddHttpContextAccessor();
             services.AddScoped<CurrentUser>();
+            services.AddScoped<ICurrentUserContext>(sp => sp.GetRequiredService<CurrentUser>());
         }
 
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env, ILogger<Program> logger)
@@ -111,7 +115,10 @@ namespace DDDProject.API
                     context.SeedRoles();
                     context.SeedUsers();
                     context.SeedMenus();
-                    logger.LogInformation("数据库初始化完成，角色表、用户表和菜单表已同步并创建了初始数据。");
+                    context.SeedUserRoles();
+                    context.SeedSettings();
+                    context.SeedPermissions();
+                    logger.LogInformation("数据库初始化完成，角色表、用户表、菜单表、用户角色关联表、系统设置表和权限表已同步并创建了初始数据。");
                 }
                 catch (Exception ex)
                 {

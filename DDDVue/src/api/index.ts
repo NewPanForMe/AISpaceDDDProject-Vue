@@ -122,6 +122,61 @@ export interface ChangeMenuStatusRequestDto {
   id: string;
 }
 
+// ==================== 系统设置模块 ====================
+export interface SettingDto {
+  id: string;
+  key: string;
+  value: string;
+  description?: string;
+  group: string;
+  createdAt: string;
+  updatedAt?: string;
+}
+
+export interface UpdateSettingRequest {
+  key: string;
+  value: string;
+}
+
+export interface BatchUpdateSettingsRequest {
+  settings: UpdateSettingRequest[];
+}
+
+// ==================== 权限模块 ====================
+export interface PermissionDto {
+  id: string;
+  code: string;
+  name: string;
+  description?: string;
+  module: string;
+  menuId?: string;
+  sortOrder: number;
+  status: number;
+  createdAt: string;
+  updatedAt?: string;
+}
+
+export interface CreatePermissionRequest {
+  code: string;
+  name: string;
+  description?: string;
+  module: string;
+  menuId?: string;
+  sortOrder: number;
+}
+
+export interface UpdatePermissionRequest {
+  id: string;
+  name?: string;
+  description?: string;
+  sortOrder?: number;
+}
+
+export interface AssignRolePermissionsRequest {
+  roleId: string;
+  permissionIds: string[];
+}
+
 // 分页响应接口
 export interface PagedResult<T> {
   list: T[];
@@ -176,6 +231,38 @@ export interface ApiConfig {
     GetRoleUserIdsAsync: string;
     AssignRoleUsersAsync: string;
   };
+  MenuRole: {
+    GetRoleMenuIdsAsync: string;
+    GetMenuRoleIdsAsync: string;
+    AssignRoleMenusAsync: string;
+    AssignMenuRolesAsync: string;
+    GetRoleMenusAsync: string;
+    GetUserMenusByRolesAsync: string;
+    ClearRoleMenusAsync: string;
+    ClearMenuRolesAsync: string;
+  };
+  Setting: {
+    GetAllSettingsAsync: string;
+    GetSettingsByGroupAsync: string;
+    GetSettingByKeyAsync: string;
+    UpdateSettingAsync: string;
+    BatchUpdateSettingsAsync: string;
+  };
+  Permission: {
+    GetPermissionsAsync: string;
+    GetAllEnabledPermissionsAsync: string;
+    GetPermissionsByModuleAsync: string;
+    GetPermissionByIdAsync: string;
+    CreatePermissionAsync: string;
+    UpdatePermissionAsync: string;
+    DeletePermissionAsync: string;
+    EnablePermissionAsync: string;
+    DisablePermissionAsync: string;
+    GetRolePermissionIdsAsync: string;
+    AssignRolePermissionsAsync: string;
+    GetUserPermissionsAsync: string;
+    HasPermissionAsync: string;
+  };
 }
 
 // ==================== API 配置对象 ====================
@@ -222,6 +309,38 @@ const api: ApiConfig = {
     GetEnabledRolesAsync: 'api/Role/GetEnabledRolesAsync',
     GetRoleUserIdsAsync: 'api/Role/GetRoleUserIdsAsync',
     AssignRoleUsersAsync: 'api/Role/AssignRoleUsersAsync',
+  },
+  MenuRole: {
+    GetRoleMenuIdsAsync: 'api/MenuRole/GetRoleMenuIdsAsync',
+    GetMenuRoleIdsAsync: 'api/MenuRole/GetMenuRoleIdsAsync',
+    AssignRoleMenusAsync: 'api/MenuRole/AssignRoleMenusAsync',
+    AssignMenuRolesAsync: 'api/MenuRole/AssignMenuRolesAsync',
+    GetRoleMenusAsync: 'api/MenuRole/GetRoleMenusAsync',
+    GetUserMenusByRolesAsync: 'api/MenuRole/GetUserMenusByRolesAsync',
+    ClearRoleMenusAsync: 'api/MenuRole/ClearRoleMenusAsync',
+    ClearMenuRolesAsync: 'api/MenuRole/ClearMenuRolesAsync',
+  },
+  Setting: {
+    GetAllSettingsAsync: 'api/Setting/GetAllSettingsAsync',
+    GetSettingsByGroupAsync: 'api/Setting/GetSettingsByGroupAsync',
+    GetSettingByKeyAsync: 'api/Setting/GetSettingByKeyAsync',
+    UpdateSettingAsync: 'api/Setting/UpdateSettingAsync',
+    BatchUpdateSettingsAsync: 'api/Setting/BatchUpdateSettingsAsync',
+  },
+  Permission: {
+    GetPermissionsAsync: 'api/Permission/GetPermissionsAsync',
+    GetAllEnabledPermissionsAsync: 'api/Permission/GetAllEnabledPermissionsAsync',
+    GetPermissionsByModuleAsync: 'api/Permission/GetPermissionsByModuleAsync',
+    GetPermissionByIdAsync: 'api/Permission/GetPermissionByIdAsync',
+    CreatePermissionAsync: 'api/Permission/CreatePermissionAsync',
+    UpdatePermissionAsync: 'api/Permission/UpdatePermissionAsync',
+    DeletePermissionAsync: 'api/Permission/DeletePermissionAsync',
+    EnablePermissionAsync: 'api/Permission/EnablePermissionAsync',
+    DisablePermissionAsync: 'api/Permission/DisablePermissionAsync',
+    GetRolePermissionIdsAsync: 'api/Permission/GetRolePermissionIdsAsync',
+    AssignRolePermissionsAsync: 'api/Permission/AssignRolePermissionsAsync',
+    GetUserPermissionsAsync: 'api/Permission/GetUserPermissionsAsync',
+    HasPermissionAsync: 'api/Permission/HasPermissionAsync',
   },
 };
 

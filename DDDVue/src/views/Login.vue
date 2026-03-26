@@ -15,7 +15,7 @@ import { http } from '../utils/http'
 import api from '../api/index'
 import { showSuccessNotification, showErrorNotification } from '../utils/notification'
 import { aesEncrypt } from '../utils/crypto'
-import { setItem, StorageKeys } from '@/utils/storage'
+import { setItem, StorageKeys, setUserPermissions } from '@/utils/storage'
 
 
 
@@ -111,6 +111,19 @@ const handleSubmit = async () => {
       }
       if (response.data?.userName) {
         setItem(StorageKeys.UserInfo, userInfo)
+      }
+
+      // 获取用户权限
+      try {
+        const permissionResponse = await http.get<string[]>(api.Permission.GetUserPermissionsAsync, {
+          params: { userId: response.data?.userId }
+        })
+        if (permissionResponse.success && permissionResponse.data) {
+          setUserPermissions(permissionResponse.data)
+        }
+      } catch (permError) {
+        console.error('获取用户权限失败:', permError)
+        // 权限获取失败不影响登录流程
       }
 
       // 显示成功提示

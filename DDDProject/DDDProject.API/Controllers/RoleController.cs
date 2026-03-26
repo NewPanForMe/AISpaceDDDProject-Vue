@@ -165,3 +165,241 @@ public class RoleController : BaseApiController
         return await _roleService.AssignRoleUsersAsync(request.RoleId, request.UserIds);
     }
 }
+
+/// <summary>
+/// 系统设置控制器
+/// </summary>
+[ApiController]
+[Route("api/[controller]/[action]")]
+[Authorize]
+public class SettingController : BaseApiController
+{
+    private readonly ISettingService _settingService;
+
+    /// <summary>
+    /// 构造函数
+    /// </summary>
+    /// <param name="settingService">设置服务</param>
+    public SettingController(ISettingService settingService)
+    {
+        _settingService = settingService;
+    }
+
+    /// <summary>
+    /// 获取所有设置
+    /// </summary>
+    [HttpGet]
+    [ActionName("GetAllSettingsAsync")]
+    [ApiSearch(Name = "获取所有设置", Description = "获取所有系统设置项", Category = ApiSearchCategory.Setting)]
+    public async Task<ApiRequestResult> GetAllSettingsAsync()
+    {
+        return await _settingService.GetAllSettingsAsync();
+    }
+
+    /// <summary>
+    /// 根据分组获取设置
+    /// </summary>
+    [HttpGet]
+    [ActionName("GetSettingsByGroupAsync")]
+    [ApiSearch(Name = "按分组获取设置", Description = "根据分组获取系统设置项", Category = ApiSearchCategory.Setting)]
+    public async Task<ApiRequestResult> GetSettingsByGroupAsync([FromQuery] string group)
+    {
+        return await _settingService.GetSettingsByGroupAsync(group);
+    }
+
+    /// <summary>
+    /// 根据键获取设置值
+    /// </summary>
+    [HttpGet]
+    [ActionName("GetSettingByKeyAsync")]
+    [ApiSearch(Name = "获取设置值", Description = "根据键获取设置值", Category = ApiSearchCategory.Setting)]
+    public async Task<ApiRequestResult> GetSettingByKeyAsync([FromQuery] string key)
+    {
+        return await _settingService.GetSettingByKeyAsync(key);
+    }
+
+    /// <summary>
+    /// 更新单个设置
+    /// </summary>
+    [HttpPost]
+    [ActionName("UpdateSettingAsync")]
+    [ApiSearch(Name = "更新设置", Description = "更新单个设置项", Category = ApiSearchCategory.Setting)]
+    public async Task<ApiRequestResult> UpdateSettingAsync([FromBody] UpdateSettingRequest request)
+    {
+        return await _settingService.UpdateSettingAsync(request);
+    }
+
+    /// <summary>
+    /// 批量更新设置
+    /// </summary>
+    [HttpPost]
+    [ActionName("BatchUpdateSettingsAsync")]
+    [ApiSearch(Name = "批量更新设置", Description = "批量更新多个设置项", Category = ApiSearchCategory.Setting)]
+    public async Task<ApiRequestResult> BatchUpdateSettingsAsync([FromBody] BatchUpdateSettingsRequest request)
+    {
+        return await _settingService.BatchUpdateSettingsAsync(request);
+    }
+}
+
+/// <summary>
+/// 权限控制器
+/// </summary>
+[ApiController]
+[Route("api/[controller]/[action]")]
+[Authorize]
+public class PermissionController : BaseApiController
+{
+    private readonly IPermissionService _permissionService;
+
+    /// <summary>
+    /// 构造函数
+    /// </summary>
+    /// <param name="permissionService">权限服务</param>
+    public PermissionController(IPermissionService permissionService)
+    {
+        _permissionService = permissionService;
+    }
+
+    /// <summary>
+    /// 获取权限列表（分页）
+    /// </summary>
+    [HttpGet]
+    [ActionName("GetPermissionsAsync")]
+    [ApiSearch(Name = "获取权限列表", Description = "分页获取权限列表", Category = ApiSearchCategory.Role)]
+    public async Task<ApiRequestResult> GetPermissionsAsync([FromQuery] int pageNum = 1, [FromQuery] int pageSize = 10)
+    {
+        return await _permissionService.GetPermissionsAsync(new PagedRequest { PageNumber = pageNum, PageSize = pageSize });
+    }
+
+    /// <summary>
+    /// 获取所有启用的权限列表
+    /// </summary>
+    [HttpGet]
+    [ActionName("GetAllEnabledPermissionsAsync")]
+    [ApiSearch(Name = "获取启用权限", Description = "获取所有启用的权限列表", Category = ApiSearchCategory.Role)]
+    public async Task<ApiRequestResult> GetAllEnabledPermissionsAsync()
+    {
+        return await _permissionService.GetAllEnabledPermissionsAsync();
+    }
+
+    /// <summary>
+    /// 根据模块获取权限列表
+    /// </summary>
+    [HttpGet]
+    [ActionName("GetPermissionsByModuleAsync")]
+    [ApiSearch(Name = "按模块获取权限", Description = "根据模块获取权限列表", Category = ApiSearchCategory.Role)]
+    public async Task<ApiRequestResult> GetPermissionsByModuleAsync([FromQuery] string module)
+    {
+        return await _permissionService.GetPermissionsByModuleAsync(module);
+    }
+
+    /// <summary>
+    /// 获取权限详情
+    /// </summary>
+    [HttpGet]
+    [ActionName("GetPermissionByIdAsync")]
+    [ApiSearch(Name = "获取权限详情", Description = "根据ID获取权限详情", Category = ApiSearchCategory.Role)]
+    public async Task<ApiRequestResult> GetPermissionByIdAsync([FromQuery] Guid id)
+    {
+        return await _permissionService.GetPermissionByIdAsync(id);
+    }
+
+    /// <summary>
+    /// 创建权限
+    /// </summary>
+    [HttpPost]
+    [ActionName("CreatePermissionAsync")]
+    [ApiSearch(Name = "创建权限", Description = "创建新的权限", Category = ApiSearchCategory.Role)]
+    public async Task<ApiRequestResult> CreatePermissionAsync([FromBody] CreatePermissionRequest request)
+    {
+        return await _permissionService.CreatePermissionAsync(request);
+    }
+
+    /// <summary>
+    /// 更新权限
+    /// </summary>
+    [HttpPut]
+    [ActionName("UpdatePermissionAsync")]
+    [ApiSearch(Name = "更新权限", Description = "更新权限信息", Category = ApiSearchCategory.Role)]
+    public async Task<ApiRequestResult> UpdatePermissionAsync([FromBody] UpdatePermissionRequest request)
+    {
+        return await _permissionService.UpdatePermissionAsync(request);
+    }
+
+    /// <summary>
+    /// 删除权限
+    /// </summary>
+    [HttpDelete]
+    [ActionName("DeletePermissionAsync")]
+    [ApiSearch(Name = "删除权限", Description = "删除指定权限", Category = ApiSearchCategory.Role)]
+    public async Task<ApiRequestResult> DeletePermissionAsync([FromQuery] Guid id)
+    {
+        return await _permissionService.DeletePermissionAsync(id);
+    }
+
+    /// <summary>
+    /// 启用权限
+    /// </summary>
+    [HttpPost]
+    [ActionName("EnablePermissionAsync")]
+    [ApiSearch(Name = "启用权限", Description = "启用指定权限", Category = ApiSearchCategory.Role)]
+    public async Task<ApiRequestResult> EnablePermissionAsync([FromQuery] Guid id)
+    {
+        return await _permissionService.EnablePermissionAsync(id);
+    }
+
+    /// <summary>
+    /// 禁用权限
+    /// </summary>
+    [HttpPost]
+    [ActionName("DisablePermissionAsync")]
+    [ApiSearch(Name = "禁用权限", Description = "禁用指定权限", Category = ApiSearchCategory.Role)]
+    public async Task<ApiRequestResult> DisablePermissionAsync([FromQuery] Guid id)
+    {
+        return await _permissionService.DisablePermissionAsync(id);
+    }
+
+    /// <summary>
+    /// 获取角色的权限ID列表
+    /// </summary>
+    [HttpGet]
+    [ActionName("GetRolePermissionIdsAsync")]
+    [ApiSearch(Name = "获取角色权限", Description = "获取角色的权限ID列表", Category = ApiSearchCategory.Role)]
+    public async Task<ApiRequestResult> GetRolePermissionIdsAsync([FromQuery] Guid roleId)
+    {
+        return await _permissionService.GetRolePermissionIdsAsync(roleId);
+    }
+
+    /// <summary>
+    /// 为角色分配权限
+    /// </summary>
+    [HttpPost]
+    [ActionName("AssignRolePermissionsAsync")]
+    [ApiSearch(Name = "分配角色权限", Description = "为角色分配权限", Category = ApiSearchCategory.Role)]
+    public async Task<ApiRequestResult> AssignRolePermissionsAsync([FromBody] AssignRolePermissionsRequest request)
+    {
+        return await _permissionService.AssignRolePermissionsAsync(request.RoleId, request.PermissionIds);
+    }
+
+    /// <summary>
+    /// 获取用户的权限列表
+    /// </summary>
+    [HttpGet]
+    [ActionName("GetUserPermissionsAsync")]
+    [ApiSearch(Name = "获取用户权限", Description = "获取用户的权限列表（通过角色）", Category = ApiSearchCategory.Role)]
+    public async Task<ApiRequestResult> GetUserPermissionsAsync([FromQuery] Guid userId)
+    {
+        return await _permissionService.GetUserPermissionsAsync(userId);
+    }
+
+    /// <summary>
+    /// 检查用户是否有指定权限
+    /// </summary>
+    [HttpGet]
+    [ActionName("HasPermissionAsync")]
+    [ApiSearch(Name = "检查用户权限", Description = "检查用户是否有指定权限", Category = ApiSearchCategory.Role)]
+    public async Task<ApiRequestResult> HasPermissionAsync([FromQuery] Guid userId, [FromQuery] string permissionCode)
+    {
+        return await _permissionService.HasPermissionAsync(userId, permissionCode);
+    }
+}

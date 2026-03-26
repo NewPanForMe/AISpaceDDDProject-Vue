@@ -10,10 +10,10 @@ import { initRouteConfig, getRoutes, convertToRouterFormat } from './detail'
 const createDynamicRouter = async () => {
   // 初始化路由配置
   await initRouteConfig()
-  
+
   // 获取路由配置
   const dynamicRoutes = await getRoutes()
-  
+
   // 转换为 Vue Router 格式
   const routerFormatRoutes = convertToRouterFormat(dynamicRoutes)
 
@@ -34,19 +34,14 @@ const createDynamicRouter = async () => {
           ...routerFormatRoutes,
           // 固定路由：系统页面
           {
-              path: 'user-role',
-              name: 'user-role',
-              component: () => import('../views/home/UserRole/UserRole.vue')
+            path: 'profile',
+            name: 'profile',
+            component: () => import('../views/home/Profile/Profile.vue')
           },
           {
-              path: 'profile',
-              name: 'profile',
-              component: () => import('../views/home/Profile/Profile.vue')
-          },
-          {
-              path: 'clear-cache',
-              name: 'clear-cache',
-              component: ClearCache
+            path: 'clear-cache',
+            name: 'clear-cache',
+            component: ClearCache
           },
           // 通配符路由，必须放在最后
           {
@@ -73,7 +68,7 @@ export const initAppRouter = async () => {
 
 // 导航守卫：检查登录状态
 const setupNavigationGuards = (router: any) => {
-  router.beforeEach((to: any, from: any) => {
+  router.beforeEach((to: any, _from: any) => {
     const token = getItem<string>(StorageKeys.Token)
 
     // 如果访问的是登录页

@@ -12,22 +12,173 @@ namespace DDDProject.Application.Services;
 public class MenuService : IMenuService
 {
     private readonly IRepository<Menu> _menuRepository;
+    private readonly IRepository<Role> _roleRepository;
+    private readonly IRepository<UserRole> _userRoleRepository;
+    private readonly IRepository<MenuRole> _menuRoleRepository;
+    private readonly ICurrentUserContext _currentUserContext;
 
-    public MenuService(IRepository<Menu> menuRepository)
+    public MenuService(
+        IRepository<Menu> menuRepository,
+        IRepository<Role> roleRepository,
+        IRepository<UserRole> userRoleRepository,
+        IRepository<MenuRole> menuRoleRepository,
+        ICurrentUserContext currentUserContext)
     {
         _menuRepository = menuRepository;
+        _roleRepository = roleRepository;
+        _userRoleRepository = userRoleRepository;
+        _menuRoleRepository = menuRoleRepository;
+        _currentUserContext = currentUserContext;
     }
 
     /// <summary>
-    /// 获取树形结构的菜单（用于侧边栏菜单，无需分页）
+    /// 获取树形结构的菜单（用于侧边栏菜单，根据用户角色过滤）
     /// </summary>
     public async Task<ApiRequestResult> GetSidebarMenusAsync()
     {
         try
         {
-            // 只获取启用的菜单
-            var menus = await _menuRepository.GetListAsync(m => true);
-            var menuDtos = BuildTreeMenu(menus.ToList());
+            var userId = _currentUserContext.UserId;
+
+            // 如果用户未登录，返回空菜单
+            if (userId == Guid.Empty)
+            {
+                return new ApiRequestResult
+                {
+                    Success = true,
+                    Message = "操作成功",
+                    Data = new List<MenuDto>()
+                };
+            }
+
+            // 获取用户角色
+            var userRoles = await _userRoleRepository.GetListAsync(ur => ur.UserId == userId);
+            var userRoleList = userRoles.ToList();
+
+            // 如果用户没有角色，返回空菜单
+            if (userRoleList.Count == 0)
+            {
+                return new ApiRequestResult
+                {
+                    Success = true,
+                    Message = "操作成功",
+                    Data = new List<MenuDto>()
+                };
+            }
+
+            var roleIds = userRoleList.Select(ur => ur.RoleId).ToList();
+
+            // 获取启用的角色
+            var roles = await _roleRepository.GetListAsync(r => roleIds.Contains(r.Id) && r.Status == 1);
+            var roleList = roles.ToList();
+
+            // 检查是否是超级管理员
+            var isSuperAdmin = roleList.Any(r => r.Code == "SUPER_ADMIN");
+
+            if (isSuperAdmin)
+            {
+                // 超级管理员返回所有启用的菜单
+                var allMenus = await _menuRepository.GetListAsync(m => m.Status == 1);
+                var menuDtos = BuildTreeMenu(allMenus.ToList());
+
+                return new ApiRequestResult
+                {
+                    Success = true,
+                    Message = "操作成功",
+                    Data = menuDtos
+                };
+            }
+
+            var enabledRoleIds = roleList.Select(r => r.Id).ToList();
+
+            // 如果没有启用的角色，返回空菜单
+            if (enabledRoleIds.Count == 0)
+            {
+                return new ApiRequestResult
+                {
+                    Success = true,
+                    Message = "操作成功",
+                    Data = new List<MenuDto>()
+                };
+            }
+
+            // 获取角色关联的菜单ID
+            var menuRoles = await _menuRoleRepository.GetListAsync(mr => enabledRoleIds.Contains(mr.RoleId));
+            var menuIds = menuRoles.Select(mr => mr.MenuId).Distinct().ToList();
+
+            // 如果没有菜单权限，返回空菜单
+            if (menuIds.Count == 0)
+            {
+                return new ApiRequestResult
+                {
+                    Success = true,
+                    Message = "操作成功",
+                    Data = new List<MenuDto>()
+                };
+            }
+
+            // 获取所有启用的菜单
+            var allMenus2 = await _menuRepository.GetListAsync(m => m.Status == 1);
+            var menuList = allMenus2.ToList();
+
+            // 获取用户有权限的菜单及其所有父级菜单
+            var authorizedMenuIds = GetAuthorizedMenuIdsWithParents(menuList, menuIds);
+
+            // 过滤出用户有权限的菜单
+            var filteredMenus = menuList.Where(m => authorizedMenuIds.Contains(m.Id)).ToList();
+
+            // 构建树形结构
+            var menuDtos2 = BuildTreeMenu(filteredMenus);
+
+            return new ApiRequestResult
+            {
+                Success = true,
+                Message = "操作成功",
+                Data = menuDtos2
+            };
+        }
+        catch (Exception ex)
+        {
+            return new ApiRequestResult
+            {
+                Success = false,
+                Message = $"获取侧边栏菜单失败: {ex.Message}",
+                Data = null
+            };
+        }
+    }
+
+    /// <summary>
+    /// 根据菜单ID列表获取树形结构的菜单（用于侧边栏菜单，根据用户权限过滤）
+    /// </summary>
+    /// <param name="menuIds">菜单ID列表</param>
+    public async Task<ApiRequestResult> GetSidebarMenusByMenuIdsAsync(List<Guid> menuIds)
+    {
+        try
+        {
+            // 如果没有菜单权限，返回空列表
+            if (menuIds is null || !menuIds.Any())
+            {
+                return new ApiRequestResult
+                {
+                    Success = true,
+                    Message = "操作成功",
+                    Data = new List<MenuDto>()
+                };
+            }
+
+            // 获取所有启用的菜单
+            var allMenus = await _menuRepository.GetListAsync(m => m.Status == 1);
+            var menuList = allMenus.ToList();
+
+            // 获取用户有权限的菜单及其所有父级菜单
+            var authorizedMenuIds = GetAuthorizedMenuIdsWithParents(menuList, menuIds);
+
+            // 过滤出用户有权限的菜单
+            var filteredMenus = menuList.Where(m => authorizedMenuIds.Contains(m.Id)).ToList();
+
+            // 构建树形结构
+            var menuDtos = BuildTreeMenu(filteredMenus);
 
             return new ApiRequestResult
             {
@@ -44,6 +195,45 @@ public class MenuService : IMenuService
                 Message = $"获取侧边栏菜单失败: {ex.Message}",
                 Data = null
             };
+        }
+    }
+
+    /// <summary>
+    /// 获取用户有权限的菜单ID及其所有父级菜单ID
+    /// </summary>
+    /// <param name="allMenus">所有菜单列表</param>
+    /// <param name="authorizedMenuIds">用户有权限的菜单ID列表</param>
+    /// <returns>包含父级菜单的完整菜单ID集合</returns>
+    private HashSet<Guid> GetAuthorizedMenuIdsWithParents(List<Menu> allMenus, List<Guid> authorizedMenuIds)
+    {
+        var result = new HashSet<Guid>(authorizedMenuIds);
+
+        // 递归添加所有父级菜单
+        foreach (var menuId in authorizedMenuIds)
+        {
+            AddParentMenuIds(allMenus, menuId, result);
+        }
+
+        return result;
+    }
+
+    /// <summary>
+    /// 递归添加父级菜单ID
+    /// </summary>
+    /// <param name="allMenus">所有菜单列表</param>
+    /// <param name="menuId">当前菜单ID</param>
+    /// <param name="result">结果集合</param>
+    private void AddParentMenuIds(List<Menu> allMenus, Guid menuId, HashSet<Guid> result)
+    {
+        var menu = allMenus.FirstOrDefault(m => m.Id == menuId);
+        if (menu is not null && menu.ParentId.HasValue && menu.ParentId.Value != Guid.Empty)
+        {
+            // 添加父级菜单ID
+            if (result.Add(menu.ParentId.Value))
+            {
+                // 递归添加更上层的父级
+                AddParentMenuIds(allMenus, menu.ParentId.Value, result);
+            }
         }
     }
 

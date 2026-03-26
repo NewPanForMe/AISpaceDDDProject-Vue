@@ -4,7 +4,7 @@
       <el-card class="menu-card">
         <template #header>
           <div class="card-header">
-            <el-button class="button" type="primary" @click="addMenu">添加菜单</el-button>
+            <el-button v-if="hasPermission(PermissionCodes.MENU_ADD)" class="button" type="primary" @click="addMenu">添加菜单</el-button>
           </div>
         </template>
         <el-table :data="menuList" style="width: 100%" row-key="id"
@@ -35,9 +35,9 @@
           <el-table-column label="操作" width="200" fixed="right">
             <template #default="{ row }">
               <div class="table-actions">
-                <el-button size="small" @click="editMenu(row)">编辑</el-button>
-                <el-button size="small" type="danger" @click="deleteMenu(row.id)">删除</el-button>
-                <el-button size="small" type="primary" @click="addChildMenu(row)">子菜单</el-button>
+                <el-button v-if="hasPermission(PermissionCodes.MENU_EDIT)" size="small" @click="editMenu(row)">编辑</el-button>
+                <el-button v-if="hasPermission(PermissionCodes.MENU_DELETE)" size="small" type="danger" @click="deleteMenu(row.id)">删除</el-button>
+                <el-button v-if="hasPermission(PermissionCodes.MENU_ADD_CHILD)" size="small" type="primary" @click="addChildMenu(row)">子菜单</el-button>
               </div>
             </template>
           </el-table-column>
@@ -102,47 +102,30 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, onMounted } from 'vue'
 import { ElMessageBox } from 'element-plus'
 import * as menuApi from '@/api/menu'
-import type { PageParams } from '@/api/menu'
+import type { PageParams, MenuTree } from '@/api/menu'
 import * as Icons from '@element-plus/icons-vue'
-import { removeItem, setItem, StorageKeys } from '@/utils/storage'
+import { removeItem, setItem, getItem, StorageKeys, hasPermission, PermissionCodes } from '@/utils/storage'
 import { showSuccessNotification, showErrorNotification } from '@/utils/notification'
 
 // 解构导入 API 函数
 const { getPagedMenuTree, addMenu: addMenuApi, updateMenu: updateMenuApi, deleteMenu: deleteMenuApi } = menuApi
 
-// 菜单数据类型
-interface Menu {
-  id?: string | number
-  name: string
-  path: string
-  component: string
-  icon?: string
-  parentId?: string | number
-  sortOrder: number
-  status: number
-  children?: Menu[]
-}
+// 菜单数据类型（使用 API 定义的 MenuTree 类型）
+type Menu = MenuTree
 
 // 菜单表单类型
 interface MenuForm {
   id?: string | number
   name: string
   path: string
-  component: string
+  component?: string
   icon?: string
   parentId?: string | number
-  sortOrder: number
-  status: number
-}
-
-// 分页数据
-interface Pagination {
-  pageNum: number
-  pageSize: number
-  total: number
+  sortOrder?: number
+  status?: number
 }
 
 // 响应式数据
@@ -155,7 +138,7 @@ const menuForm = ref<MenuForm>({
   path: '',
   component: '',
   icon: '',
-  parentId: null,
+  parentId: undefined,
   sortOrder: 0,
   status: 1
 })
@@ -183,23 +166,37 @@ const menuRules = {
 }
 
 // 加载菜单数据
-const loadMenuData = async () => {
+const loadMenuData = async (forceRefresh: boolean = false) => {
   try {
     const params: PageParams = {
       pageNum: pagination.value.pageNum,
       pageSize: pagination.value.pageSize
     }
+
+    // 生成缓存键（包含分页参数）
+    const cacheKey = `${StorageKeys.List}_menu_${params.pageNum}_${params.pageSize}`
+
+    // 如果不是强制刷新，优先从缓存获取
+    if (!forceRefresh) {
+      const cachedData = getItem<{ list: Menu[], total: number }>(cacheKey)
+      if (cachedData) {
+        menuList.value = cachedData.list || []
+        pagination.value.total = cachedData.total || 0
+        buildTreeData()
+        return
+      }
+    }
+
+    // 缓存不存在或强制刷新，从 API 获取
     const response = await getPagedMenuTree(params)
     if (response.data) {
       menuList.value = response.data.list || []
       pagination.value.total = response.data.total || 0
-      // 存储菜单列表数据到 localStorage (List 分类)
-      setItem(StorageKeys.MenuList, {
+
+      // 存入缓存
+      setItem(cacheKey, {
         list: menuList.value,
-        total: pagination.value.total,
-        pageNum: pagination.value.pageNum,
-        pageSize: pagination.value.pageSize,
-        timestamp: Date.now()
+        total: pagination.value.total
       })
     }
     buildTreeData()
@@ -207,6 +204,19 @@ const loadMenuData = async () => {
     console.error('加载菜单数据失败:', error)
     showErrorNotification({ title: '错误', message: '加载菜单数据失败' })
   }
+}
+
+// 清空菜单列表缓存
+const clearMenuCache = () => {
+  // 清除所有以 'list_menu' 开头的缓存
+  const keysToRemove: string[] = []
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i)
+    if (key && key.startsWith(`${StorageKeys.List}_menu`)) {
+      keysToRemove.push(key)
+    }
+  }
+  keysToRemove.forEach(key => localStorage.removeItem(key))
 }
 
 // 构建树形菜单数据
@@ -247,7 +257,8 @@ const deleteMenu = async (id: number) => {
 
     // 调用API删除菜单
     await deleteMenuApi(id.toString())
-    await loadMenuData() // 重新加载数据
+    clearMenuCache() // 清空菜单缓存
+    await loadMenuData(true) // 强制重新获取数据
     await refreshSidebarMenu() // 刷新侧边栏菜单
     showSuccessNotification({ title: '成功', message: '删除成功' })
   } catch (error) {
@@ -262,7 +273,7 @@ const resetMenuForm = () => {
     path: '',
     component: '',
     icon: '',
-    parentId: null,
+    parentId: undefined,
     sortOrder: 0,
     status: 1
   }
@@ -286,7 +297,8 @@ const submitMenuForm = async () => {
     }
 
     dialogVisible.value = false
-    await loadMenuData() // 重新加载数据
+    clearMenuCache() // 清空菜单缓存
+    await loadMenuData(true) // 强制重新获取数据
     await refreshSidebarMenu() // 刷新侧边栏菜单
   } catch (error) {
     console.log('验证失败或保存失败')
@@ -300,16 +312,6 @@ const refreshSidebarMenu = async () => {
     window.location.reload()
   } catch (error) {
     console.error('刷新侧边栏菜单失败:', error)
-  }
-}
-
-// 清除菜单列表缓存
-const clearMenuListCache = () => {
-  try {
-    removeItem(StorageKeys.MenuList)
-    showSuccessNotification({ title: '成功', message: '菜单列表缓存已清除' })
-  } catch (error) {
-    console.error('清除菜单列表缓存失败:', error)
   }
 }
 

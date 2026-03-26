@@ -14,6 +14,12 @@ public interface IMenuRoleService : IApplicationService
     Task<ApiRequestResult> GetRoleMenuIdsAsync(Guid roleId);
 
     /// <summary>
+    /// 根据用户ID获取菜单ID列表（通过用户角色关联）
+    /// </summary>
+    /// <param name="userId">用户ID</param>
+    Task<ApiRequestResult> GetRoleMenuIdsByUserIdAsync(Guid userId);
+
+    /// <summary>
     /// 获取菜单的角色ID列表
     /// </summary>
     /// <param name="menuId">菜单ID</param>

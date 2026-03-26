@@ -32,10 +32,6 @@ service.interceptors.request.use(
 );
 
 // 递归转换对象属性名为 camelCase
-const toCamelCase = (str: string): string => {
-  return str.replace(/_([a-z])/g, (match, letter) => letter.toUpperCase())
-}
-
 const convertToCamelCase = (obj: any): any => {
   if (Array.isArray(obj)) {
     return obj.map(item => convertToCamelCase(item))

@@ -56,6 +56,80 @@ public class MenuRoleService : IMenuRoleService
     }
 
     /// <summary>
+    /// 根据用户ID获取菜单ID列表（通过用户角色关联）
+    /// </summary>
+    public async Task<ApiRequestResult> GetRoleMenuIdsByUserIdAsync(Guid userId)
+    {
+        try
+        {
+            // 获取用户的所有角色
+            var userRoles = await _userRoleRepository.GetListAsync(ur => ur.UserId == userId);
+            var roleIds = userRoles.Select(ur => ur.RoleId).ToList();
+
+            if (!roleIds.Any())
+            {
+                return new ApiRequestResult
+                {
+                    Success = true,
+                    Message = "用户无角色",
+                    Data = new List<Guid>()
+                };
+            }
+
+            // 获取启用的角色
+            var roles = await _roleRepository.GetListAsync(r => roleIds.Contains(r.Id) && r.Status == 1);
+            var enabledRoleIds = roles.Select(r => r.Id).ToList();
+
+            // 检查是否是超级管理员
+            var isSuperAdmin = roles.Any(r => r.Code == "SUPER_ADMIN");
+
+            if (isSuperAdmin)
+            {
+                // 超级管理员返回所有启用的菜单
+                var allMenus = await _menuRepository.GetListAsync(m => m.Status == 1);
+                var allMenuIds = allMenus.Select(m => m.Id).ToList();
+
+                return new ApiRequestResult
+                {
+                    Success = true,
+                    Message = "获取用户菜单成功",
+                    Data = allMenuIds
+                };
+            }
+
+            if (!enabledRoleIds.Any())
+            {
+                return new ApiRequestResult
+                {
+                    Success = true,
+                    Message = "用户无启用的角色",
+                    Data = new List<Guid>()
+                };
+            }
+
+            // 获取这些角色的所有菜单ID
+            var menuRoles = await _menuRoleRepository.GetListAsync(mr => enabledRoleIds.Contains(mr.RoleId));
+            var menuIds = menuRoles.Select(mr => mr.MenuId).Distinct().ToList();
+
+            return new ApiRequestResult
+            {
+                Success = true,
+                Message = "获取用户菜单成功",
+                Data = menuIds
+            };
+        }
+        catch (Exception ex)
+        {
+            return new ApiRequestResult
+            {
+                Success = false,
+                Message = $"获取用户菜单失败: {ex.Message}",
+                Data = null
+            };
+        }
+    }
+
+    /// <summary>
     /// 获取菜单的角色ID列表
     /// </summary>
     public async Task<ApiRequestResult> GetMenuRoleIdsAsync(Guid menuId)

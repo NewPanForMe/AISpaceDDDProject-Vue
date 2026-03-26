@@ -15,6 +15,11 @@ public interface IMenuService : IApplicationService
     /// </summary>
     Task<ApiRequestResult> GetSidebarMenusAsync();
 
+    /// <summary>
+    /// 根据菜单ID列表获取树形结构的菜单（用于侧边栏菜单，根据用户权限过滤）
+    /// </summary>
+    /// <param name="menuIds">菜单ID列表</param>
+    Task<ApiRequestResult> GetSidebarMenusByMenuIdsAsync(List<Guid> menuIds);
 
     /// <summary>
     /// 获取分页的树形菜单数据（用于大数据量场景）

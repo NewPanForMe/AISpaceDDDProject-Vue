@@ -1,42 +1,44 @@
 <template>
   <div class="clear-cache-page">
-    <h2 class="page-title">按分类清除</h2>
-    <!-- 分类清除区域 -->
-    <div class="category-section">
-      <div class="category-buttons">
-        <el-button type="primary" @click="clearCategory('Login')" :icon="User">
-          清除登录缓存
-        </el-button>
-        <el-button type="success" @click="clearCategory('Menu')" :icon="Menu">
-          清除菜单缓存
-        </el-button>
-        <el-button type="info" @click="clearCategory('List')" :icon="DataLine">
-          清除列表缓存
-        </el-button>
-        <el-button type="warning" @click="clearCategory('All')" :icon="Setting">
-          清除全部缓存
-        </el-button>
+    <el-card class="page-card">
+      <h2 class="page-title">按分类清除</h2>
+      <!-- 分类清除区域 -->
+      <div class="category-section">
+        <div class="category-buttons">
+          <el-button v-if="hasPermission(PermissionCodes.CACHE_CLEAR_LOGIN)" type="primary" @click="clearCategory('Login')" :icon="User">
+            清除登录缓存
+          </el-button>
+          <el-button v-if="hasPermission(PermissionCodes.CACHE_CLEAR_MENU)" type="success" @click="clearCategory('Menu')" :icon="Menu">
+            清除菜单缓存
+          </el-button>
+          <el-button v-if="hasPermission(PermissionCodes.CACHE_CLEAR_LIST)" type="info" @click="clearCategory('List')" :icon="DataLine">
+            清除列表缓存
+          </el-button>
+          <el-button v-if="hasPermission(PermissionCodes.CACHE_CLEAR_ALL)" type="warning" @click="clearCategory('All')" :icon="Setting">
+            清除全部缓存
+          </el-button>
+        </div>
       </div>
-    </div>
 
-    <!-- 缓存统计 -->
-    <div class="stats-section" v-if="showStats">
-      <h3 class="section-title">当前缓存统计</h3>
-      <el-descriptions :column="4" border>
-        <el-descriptions-item label="登录缓存">
-          {{ stats['Login'] || 0 }} 项
-        </el-descriptions-item>
-        <el-descriptions-item label="菜单缓存">
-          {{ stats['Menu'] || 0 }} 项
-        </el-descriptions-item>
-        <el-descriptions-item label="列表缓存">
-          {{ stats['List'] || 0 }} 项
-        </el-descriptions-item>
-        <el-descriptions-item label="其他缓存">
-          {{ stats['Other'] || 0 }} 项
-        </el-descriptions-item>
-      </el-descriptions>
-    </div>
+      <!-- 缓存统计 -->
+      <div class="stats-section" v-if="showStats">
+        <h3 class="section-title">当前缓存统计</h3>
+        <table class="stats-table">
+          <tr>
+            <td class="label">登录缓存</td>
+            <td class="value">{{ stats['Login'] || 0 }} 项</td>
+            <td class="label">菜单缓存</td>
+            <td class="value">{{ stats['Menu'] || 0 }} 项</td>
+          </tr>
+          <tr>
+            <td class="label">列表缓存</td>
+            <td class="value">{{ stats['List'] || 0 }} 项</td>
+            <td class="label">其他缓存</td>
+            <td class="value">{{ stats['Other'] || 0 }} 项</td>
+          </tr>
+        </table>
+      </div>
+    </el-card>
   </div>
 </template>
 
@@ -44,7 +46,7 @@
 import { ref, onMounted } from 'vue'
 import { Setting, User, Menu, DataLine } from '@element-plus/icons-vue'
 import { useRouter } from 'vue-router'
-import { clearByCategory, getStorageStats, StorageKeys } from '@/utils/storage'
+import { clearByCategory, getStorageStats, clearAllCache, hasPermission, PermissionCodes } from '@/utils/storage'
 import { showSuccessNotification } from '@/utils/notification'
 
 const router = useRouter()
@@ -57,36 +59,21 @@ const updateStats = () => {
   showStats.value = true
 }
 
-// 清除所有缓存
-const clearAllCache = () => {
-  clearByCategory('All')
-  showSuccessNotification({ title: '成功', message: '所有缓存已清理' })
-  setTimeout(() => { window.location.href = '/' }, 1500)
-}
-
-// 退出登录
-const handleLogout = () => {
-  clearByCategory('Login')
-  showSuccessNotification({ title: '成功', message: '已退出登录' })
-  setTimeout(() => { router.push('/') }, 1500)
-}
-
-// 清理列表缓存
-const clearMenuCache = () => {
-  clearByCategory('Menu')
-  showSuccessNotification({ title: '成功', message: '列表缓存已清理' })
-  setTimeout(() => { window.location.reload() }, 1500)
-}
-
 // 按分类清除
 const clearCategory = (category: 'Login' | 'Menu' | 'List' | 'All') => {
+  if (category === 'All') {
+    clearAllCache()
+    showSuccessNotification({ title: '成功', message: '所有缓存已清除' })
+    setTimeout(() => { window.location.href = '/' }, 1500)
+    return
+  }
+
   clearByCategory(category)
 
   const messages = {
     Login: '登录缓存已清除',
     Menu: '菜单缓存已清除',
-    List: '列表缓存已清除',
-    All: '所有缓存已清除'
+    List: '列表缓存已清除'
   }
 
   showSuccessNotification({ title: '成功', message: messages[category] })
@@ -94,8 +81,6 @@ const clearCategory = (category: 'Login' | 'Menu' | 'List' | 'All') => {
   // 如果清除的是登录缓存，延迟跳转
   if (category === 'Login') {
     setTimeout(() => { router.push('/') }, 1500)
-  } else if (category === 'All') {
-    setTimeout(() => { window.location.href = '/' }, 1500)
   } else {
     updateStats()
   }
@@ -110,6 +95,10 @@ onMounted(() => {
 <style scoped>
 .clear-cache-page {
   padding: 20px;
+}
+
+.page-card {
+  border-radius: 8px;
 }
 
 .page-title {
@@ -166,7 +155,7 @@ onMounted(() => {
 
 /* 分类清除区域 */
 .category-section {
-  margin-top: 40px;
+  margin-top: 20px;
   padding: 20px;
   background: #f5f7fa;
   border-radius: 8px;
@@ -191,6 +180,43 @@ onMounted(() => {
   padding: 20px;
   background: #f5f7fa;
   border-radius: 8px;
+}
+
+/* 原生表格样式 */
+.stats-table {
+  width: 100%;
+  border-collapse: collapse;
+  border: 1px solid #ebeef5;
+  background: #fff;
+}
+
+.stats-table tr {
+  border-bottom: 1px solid #ebeef5;
+}
+
+.stats-table tr:last-child {
+  border-bottom: none;
+}
+
+.stats-table td {
+  padding: 12px 16px;
+  border-right: 1px solid #ebeef5;
+}
+
+.stats-table td:last-child {
+  border-right: none;
+}
+
+.stats-table .label {
+  background: #fafafa;
+  font-weight: 500;
+  color: #606266;
+  width: 25%;
+}
+
+.stats-table .value {
+  color: #303133;
+  width: 25%;
 }
 
 @media (max-width: 768px) {

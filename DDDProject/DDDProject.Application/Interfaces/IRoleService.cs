@@ -88,3 +88,116 @@ public interface IRoleService : IApplicationService
     /// <param name="userIds">用户ID列表</param>
     Task<ApiRequestResult> AssignRoleUsersAsync(Guid roleId, List<Guid> userIds);
 }
+
+/// <summary>
+/// 系统设置应用服务接口
+/// </summary>
+public interface ISettingService : IApplicationService
+{
+    /// <summary>
+    /// 获取所有设置
+    /// </summary>
+    Task<ApiRequestResult> GetAllSettingsAsync();
+
+    /// <summary>
+    /// 根据分组获取设置
+    /// </summary>
+    /// <param name="group">设置分组</param>
+    Task<ApiRequestResult> GetSettingsByGroupAsync(string group);
+
+    /// <summary>
+    /// 根据键获取设置值
+    /// </summary>
+    /// <param name="key">设置键</param>
+    Task<ApiRequestResult> GetSettingByKeyAsync(string key);
+
+    /// <summary>
+    /// 更新单个设置
+    /// </summary>
+    /// <param name="request">更新设置请求</param>
+    Task<ApiRequestResult> UpdateSettingAsync(UpdateSettingRequest request);
+
+    /// <summary>
+    /// 批量更新设置
+    /// </summary>
+    /// <param name="request">批量更新设置请求</param>
+    Task<ApiRequestResult> BatchUpdateSettingsAsync(BatchUpdateSettingsRequest request);
+}
+
+/// <summary>
+/// 权限应用服务接口
+/// </summary>
+public interface IPermissionService : IApplicationService
+{
+    /// <summary>
+    /// 获取权限列表（分页）
+    /// </summary>
+    Task<ApiRequestResult> GetPermissionsAsync(PagedRequest request);
+
+    /// <summary>
+    /// 获取所有启用的权限列表
+    /// </summary>
+    Task<ApiRequestResult> GetAllEnabledPermissionsAsync();
+
+    /// <summary>
+    /// 根据模块获取权限列表
+    /// </summary>
+    /// <param name="module">模块名称</param>
+    Task<ApiRequestResult> GetPermissionsByModuleAsync(string module);
+
+    /// <summary>
+    /// 获取权限详情
+    /// </summary>
+    Task<ApiRequestResult> GetPermissionByIdAsync(Guid id);
+
+    /// <summary>
+    /// 创建权限
+    /// </summary>
+    Task<ApiRequestResult> CreatePermissionAsync(CreatePermissionRequest request);
+
+    /// <summary>
+    /// 更新权限
+    /// </summary>
+    Task<ApiRequestResult> UpdatePermissionAsync(UpdatePermissionRequest request);
+
+    /// <summary>
+    /// 删除权限
+    /// </summary>
+    Task<ApiRequestResult> DeletePermissionAsync(Guid id);
+
+    /// <summary>
+    /// 启用权限
+    /// </summary>
+    Task<ApiRequestResult> EnablePermissionAsync(Guid id);
+
+    /// <summary>
+    /// 禁用权限
+    /// </summary>
+    Task<ApiRequestResult> DisablePermissionAsync(Guid id);
+
+    /// <summary>
+    /// 获取角色的权限ID列表
+    /// </summary>
+    /// <param name="roleId">角色ID</param>
+    Task<ApiRequestResult> GetRolePermissionIdsAsync(Guid roleId);
+
+    /// <summary>
+    /// 为角色分配权限
+    /// </summary>
+    /// <param name="roleId">角色ID</param>
+    /// <param name="permissionIds">权限ID列表</param>
+    Task<ApiRequestResult> AssignRolePermissionsAsync(Guid roleId, List<Guid> permissionIds);
+
+    /// <summary>
+    /// 获取用户的权限列表（通过角色）
+    /// </summary>
+    /// <param name="userId">用户ID</param>
+    Task<ApiRequestResult> GetUserPermissionsAsync(Guid userId);
+
+    /// <summary>
+    /// 检查用户是否有指定权限
+    /// </summary>
+    /// <param name="userId">用户ID</param>
+    /// <param name="permissionCode">权限编码</param>
+    Task<ApiRequestResult> HasPermissionAsync(Guid userId, string permissionCode);
+}

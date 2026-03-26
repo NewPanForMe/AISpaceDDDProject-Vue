@@ -4,7 +4,7 @@
       <el-card class="users-card">
         <template #header>
           <div class="card-header">
-            <el-button class="button" type="primary" @click="addUser">添加用户</el-button>
+            <el-button v-if="hasPermission(PermissionCodes.USER_ADD)" class="button" type="primary" @click="addUser">添加用户</el-button>
           </div>
         </template>
         <el-table :data="userList" style="width: 100%" :header-cell-style="{ background: '#f5f7fa', color: '#333' }"
@@ -38,15 +38,16 @@
               {{ formatDateTime(row.createdAt) }}
             </template>
           </el-table-column>
-          <el-table-column label="操作" width="340" fixed="right">
+          <el-table-column label="操作" width="400" fixed="right">
             <template #default="{ row }">
               <div class="table-actions">
-                <el-button size="small" @click="editUser(row)">编辑</el-button>
-                <el-button size="small" type="primary" @click="configRole(row)">配置角色</el-button>
-                <el-button size="small" :type="row.status === 1 ? 'warning' : 'success'" @click="toggleUserStatus(row)">
+                <el-button v-if="hasPermission(PermissionCodes.USER_EDIT)" size="small" @click="editUser(row)">编辑</el-button>
+                <el-button v-if="hasPermission(PermissionCodes.USER_RESET_PASSWORD)" size="small" type="info" @click="openResetPwdDialog(row)">重置密码</el-button>
+                <el-button v-if="hasPermission(PermissionCodes.USER_ASSIGN_ROLE)" size="small" type="primary" @click="configRole(row)">配置角色</el-button>
+                <el-button v-if="hasAnyPermission([PermissionCodes.USER_ENABLE, PermissionCodes.USER_DISABLE])" size="small" :type="row.status === 1 ? 'warning' : 'success'" @click="toggleUserStatus(row)">
                   {{ row.status === 1 ? '禁用' : '启用' }}
                 </el-button>
-                <el-button size="small" type="danger" @click="deleteUser(row)">删除</el-button>
+                <el-button v-if="hasPermission(PermissionCodes.USER_DELETE)" size="small" type="danger" @click="deleteUser(row)">删除</el-button>
               </div>
             </template>
           </el-table-column>
@@ -148,6 +149,7 @@ import * as roleApi from '@/api/role'
 import type { UserDto, CreateUserRequest, UpdateUserRequest, RoleDto } from '@/api/index'
 import { aesEncrypt } from '@/utils/crypto'
 import { showSuccessNotification, showErrorNotification } from '@/utils/notification'
+import { getItem, setItem, StorageKeys, hasPermission, hasAnyPermission, PermissionCodes } from '@/utils/storage'
 
 // 解构导入 API 函数
 const { getUsers, createUser: createUserApi, updateUser: updateUserApi, deleteUser: deleteUserApi, enableUser, disableUser, resetPassword } = userApi
@@ -299,10 +301,29 @@ const loadUserData = async () => {
       pageNum: pagination.value.pageNum,
       pageSize: pagination.value.pageSize
     }
+
+    // 生成缓存键（包含分页参数）
+    const cacheKey = `${StorageKeys.List}_user_${params.pageNum}_${params.pageSize}`
+
+    // 优先从缓存获取
+    const cachedData = getItem<{ list: UserDto[], total: number }>(cacheKey)
+    if (cachedData) {
+      userList.value = cachedData.list || []
+      pagination.value.total = cachedData.total || 0
+      return
+    }
+
+    // 缓存不存在，从 API 获取
     const response = await getUsers(params)
     if (response.data) {
       userList.value = response.data.list || []
       pagination.value.total = response.data.total || 0
+
+      // 存入缓存
+      setItem(cacheKey, {
+        list: response.data.list,
+        total: response.data.total
+      })
     }
   } catch (error) {
     console.error('加载用户数据失败:', error)
@@ -424,8 +445,8 @@ const deleteUser = async (row: UserDto) => {
   }
 }
 
-// 重置密码
-const resetPwd = (row: UserDto) => {
+// 打开重置密码对话框
+const openResetPwdDialog = (row: UserDto) => {
   resetPwdForm.value = {
     id: row.id,
     userName: row.userName,

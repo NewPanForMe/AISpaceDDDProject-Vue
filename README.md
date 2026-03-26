@@ -15,6 +15,25 @@
   </thead>
   <tbody>
     <tr>
+      <td rowspan="6">2026-03-26</td>
+      <td>新增权限管理模块（Permission），支持按钮级别的权限控制</td>
+    </tr>
+    <tr>
+      <td>JWT 配置从配置文件改为从数据库 Settings 表获取，支持动态配置</td>
+    </tr>
+    <tr>
+      <td>前端列表页添加缓存功能，统一缓存键格式为 `list_模块名_页码_每页数量`</td>
+    </tr>
+    <tr>
+      <td>登录时检查用户角色状态，禁用角色禁止登录并给出提示</td>
+    </tr>
+    <tr>
+      <td>用户列表添加重置密码按钮功能</td>
+    </tr>
+    <tr>
+      <td>新增缓存更新规则文档，规范操作后更新缓存的流程</td>
+    </tr>
+    <tr>
       <td rowspan="3">2026-03-25</td>
       <td>新增 MenuRole 模块（菜单角色关联），完善 Role 模块功能，添加数据库迁移</td>
     </tr>
@@ -46,6 +65,103 @@
 ---
 
 ## 开发日志
+
+### 2026-03-26
+
+#### 新增功能
+
+| 模块 | 功能 | 说明 |
+|------|------|------|
+| Permission | 权限管理模块 | 新增权限实体、角色权限关联，支持按钮级别权限控制 |
+| Permission | 权限分配功能 | 角色管理页面新增分配权限按钮，支持按模块分组选择权限 |
+| Permission | 权限控制功能 | 各页面按钮根据用户权限显示/隐藏 |
+| Login | JWT 动态配置 | JWT 配置从配置文件改为从数据库 Settings 表获取 |
+| Login | 登录角色状态检查 | 用户角色被禁用时禁止登录，并提示禁用的角色名称 |
+| Users | 重置密码功能 | 用户列表操作栏添加重置密码按钮 |
+| Storage | 列表缓存功能 | 用户、角色、菜单、权限列表支持缓存，优先从缓存获取数据 |
+| Role | 删除前检查关联 | 删除角色前检查用户、菜单、权限关联，有关联时禁止删除 |
+
+#### 新增文件
+
+**Domain 层：**
+- `Entities/Permission.cs` - 权限实体和角色权限关联实体
+
+**Application 层：**
+- `DTOs/PermissionDTO.cs` - 权限相关 DTO 和请求类
+- `Interfaces/IPermissionService.cs` - 权限服务接口
+- `Services/PermissionService.cs` - 权限服务实现
+
+**Infrastructure 层：**
+- `Configuration/PermissionConfiguration.cs` - 权限 EF Core 配置
+- `Configuration/RolePermissionConfiguration.cs` - 角色权限关联 EF Core 配置
+
+**前端：**
+- `utils/permission.ts` - 权限工具函数
+
+#### 数据库迁移
+
+| 迁移名称 | 说明 |
+|----------|------|
+| `AddSettingsTable` | 创建系统设置表 |
+| `AddPermissionTables` | 创建权限表和角色权限关联表 |
+
+#### API 接口
+
+**PermissionController：**
+- `GET /api/Permission/GetPermissionsAsync` - 获取权限列表（分页）
+- `GET /api/Permission/GetAllEnabledPermissionsAsync` - 获取所有启用的权限
+- `GET /api/Permission/GetPermissionsByModuleAsync` - 按模块获取权限
+- `GET /api/Permission/GetPermissionByIdAsync` - 获取权限详情
+- `POST /api/Permission/CreatePermissionAsync` - 创建权限
+- `PUT /api/Permission/UpdatePermissionAsync` - 更新权限
+- `DELETE /api/Permission/DeletePermissionAsync` - 删除权限
+- `POST /api/Permission/EnablePermissionAsync` - 启用权限
+- `POST /api/Permission/DisablePermissionAsync` - 禁用权限
+- `GET /api/Permission/GetRolePermissionIdsAsync` - 获取角色的权限ID列表
+- `POST /api/Permission/AssignRolePermissionsAsync` - 为角色分配权限
+- `GET /api/Permission/GetUserPermissionsAsync` - 获取用户权限列表
+- `GET /api/Permission/HasPermissionAsync` - 检查用户是否有指定权限
+
+#### 前端优化
+
+| 文件 | 优化内容 |
+|------|---------|
+| `Login.vue` | 登录成功后获取用户权限并存储到 localStorage |
+| `storage.ts` | 新增 Permissions 键、权限工具函数、权限编码常量 |
+| `ClearCache.vue` | 添加权限控制，按钮根据权限显示 |
+| `Users.vue` | 添加列表缓存逻辑、权限控制 |
+| `UserRole.vue` | 添加列表缓存逻辑、权限控制、分配权限功能、删除前检查关联 |
+| `Menu.vue` | 添加权限控制 |
+| `System.vue` | 添加权限控制 |
+| `Permissions.vue` | 新增权限管理页面，支持 CRUD 和模块筛选 |
+| `role.ts` | 新增权限相关 API 函数 |
+
+#### 后端优化
+
+| 文件 | 优化内容 |
+|------|---------|
+| `LoginService.cs` | JWT 配置从数据库获取，登录时检查用户角色状态 |
+| `ApplicationDbContext.cs` | 新增 Permissions 和 RolePermissions DbSet，新增权限种子数据 |
+| `Startup.cs` | 启动时初始化权限种子数据 |
+
+#### 权限编码常量
+
+| 模块 | 权限编码 | 说明 |
+|------|----------|------|
+| Menu | `menu:add`, `menu:edit`, `menu:delete`, `menu:add_child` | 菜单管理权限 |
+| User | `user:add`, `user:edit`, `user:delete`, `user:reset_password`, `user:assign_role`, `user:enable`, `user:disable` | 用户管理权限 |
+| Role | `role:add`, `role:edit`, `role:delete`, `role:assign_menu`, `role:assign_user`, `role:enable`, `role:disable` | 角色管理权限 |
+| Setting | `setting:save_jwt`, `setting:save_system` | 系统设置权限 |
+| Cache | `cache:clear_login`, `cache:clear_menu`, `cache:clear_list`, `cache:clear_all` | 缓存管理权限 |
+
+#### 文档更新
+
+- 新增权限管理模块文档
+- 新增 JWT 动态配置说明
+- 新增权限编码常量说明
+- 更新文档更新日志
+
+---
 
 ### 2026-03-25
 
@@ -537,7 +653,17 @@ views/home/
 |------|----------|------|
 | Login | 登录相关信息 | `token`, `userInfo` |
 | Menu | 菜单相关数据 | `sidebarMenu` |
-| List | 列表数据缓存 | `menuList` 等 |
+| List | 列表数据缓存 | `list_模块名_页码_每页数量` |
+
+**列表缓存键格式：**
+
+列表项数据应存入缓存中，缓存键统一格式为：`list_模块名_页码_每页数量`
+
+| 列表 | 缓存键格式 | 示例 |
+|------|-----------|------|
+| 菜单列表 | `list_menu_{pageNum}_{pageSize}` | `list_menu_1_10` |
+| 用户列表 | `list_user_{pageNum}_{pageSize}` | `list_user_1_10` |
+| 角色列表 | `list_role_{pageNum}_{pageSize}` | `list_role_1_10` |
 
 **使用方法：**
 
@@ -550,12 +676,78 @@ const token = getItem<string>(StorageKeys.Token)
 // 设置数据
 setItem(StorageKeys.Token, token)
 
+// 列表缓存（优先从缓存获取）
+const cacheKey = `${StorageKeys.List}_user_${pageNum}_${pageSize}`
+const cachedData = getItem<{ list: UserDto[], total: number }>(cacheKey)
+if (cachedData) {
+  // 使用缓存数据
+  return cachedData
+}
+// 缓存不存在，从 API 获取后存入缓存
+setItem(cacheKey, { list, total })
+
 // 分类清除
 clearByCategory('Login')  // 清除登录缓存
 clearByCategory('Menu')   // 清除菜单缓存
-clearByCategory('List')   // 清除列表缓存
+clearByCategory('List')   // 清除列表缓存（所有以 'list' 开头的键）
 clearByCategory('All')    // 清除全部缓存
 ```
+
+**缓存更新规则：**
+
+在执行编辑、删除、添加、状态变更等操作后，**必须重新获取最新数据并更新缓存**：
+
+```typescript
+// 示例：提交表单后更新缓存
+const submitForm = async () => {
+  try {
+    await formRef.value.validate()
+
+    if (isEdit) {
+      await updateApi(formData)
+      showSuccessNotification({ title: '成功', message: '编辑成功' })
+    } else {
+      await createApi(formData)
+      showSuccessNotification({ title: '成功', message: '添加成功' })
+    }
+
+    dialogVisible.value = false
+    await loadData()  // 重新获取数据，更新缓存
+  } catch (error) {
+    console.log('操作失败:', error)
+  }
+}
+
+// 示例：删除后更新缓存
+const deleteItem = async (id: string) => {
+  try {
+    await ElMessageBox.confirm('确认删除吗？', '提示', { type: 'warning' })
+    await deleteApi(id)
+    showSuccessNotification({ title: '成功', message: '删除成功' })
+    await loadData()  // 重新获取数据，更新缓存
+  } catch (error) {
+    console.log('取消删除或删除失败')
+  }
+}
+
+// 示例：状态变更后更新缓存
+const toggleStatus = async (row: Item) => {
+  try {
+    await ElMessageBox.confirm('确认操作吗？', '提示', { type: 'warning' })
+    row.status === 1 ? await disableApi(row.id) : await enableApi(row.id)
+    showSuccessNotification({ title: '成功', message: '操作成功' })
+    await loadData()  // 重新获取数据，更新缓存
+  } catch (error) {
+    console.log('取消操作或操作失败')
+  }
+}
+```
+
+**注意事项：**
+
+- `loadData()` 方法内部已实现缓存逻辑，调用后会自动更新缓存
+- 所有数据变更操作（增删改、状态变更）后都必须调用 `loadData()` 刷新缓存
+- 确保用户看到的数据始终是最新的
 
 ---
 

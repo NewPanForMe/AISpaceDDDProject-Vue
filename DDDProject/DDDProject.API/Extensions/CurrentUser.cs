@@ -1,13 +1,14 @@
 using Microsoft.AspNetCore.Http;
 using System.Security.Claims;
 using System.IdentityModel.Tokens.Jwt;
+using DDDProject.Application.Interfaces;
 
 namespace DDDProject.API.Extensions
 {
     /// <summary>
     /// 当前用户信息提供者
     /// </summary>
-    public class CurrentUser
+    public class CurrentUser : ICurrentUserContext
     {
         private readonly IHttpContextAccessor _contextAccessor;
 
@@ -26,9 +27,8 @@ namespace DDDProject.API.Extensions
         {
             get
             {
-                // 尝试从 sub claim 获取（JWT Registered Claim Names）
-                var userIdClaim = _contextAccessor.HttpContext?.User?.FindFirst("sub")?.Value
-                    ?? _contextAccessor.HttpContext?.User?.FindFirst(JwtRegisteredClaimNames.Sub)?.Value;
+                // 从 sub claim 获取用户ID
+                var userIdClaim = _contextAccessor.HttpContext?.User?.FindFirst(JwtRegisteredClaimNames.Sub)?.Value;
                 return Guid.TryParse(userIdClaim, out Guid userId) ? userId : Guid.Empty;
             }
         }
@@ -37,17 +37,15 @@ namespace DDDProject.API.Extensions
         /// 获取当前用户的用户名
         /// </summary>
         /// <remarks>
-        /// 从 JWT Token 的 Name claim 中获取，与 LoginService 创建 Token 时的 claim 保持一致
+        /// 从 JWT Token 的 unique_name claim 中获取
         /// </remarks>
         public string UserName
         {
             get
             {
-                // 尝试从多个可能的 claim 中获取用户名
-                return _contextAccessor.HttpContext?.User?.FindFirst(ClaimTypes.Name)?.Value
+                // 从 unique_name claim 获取用户名
+                return _contextAccessor.HttpContext?.User?.FindFirst(JwtRegisteredClaimNames.UniqueName)?.Value
                     ?? _contextAccessor.HttpContext?.User?.FindFirst(JwtRegisteredClaimNames.Name)?.Value
-                    ?? _contextAccessor.HttpContext?.User?.FindFirst(JwtRegisteredClaimNames.UniqueName)?.Value
-                    ?? _contextAccessor.HttpContext?.User?.Identity?.Name
                     ?? string.Empty;
             }
         }
@@ -56,16 +54,35 @@ namespace DDDProject.API.Extensions
         /// 获取当前用户的真实姓名
         /// </summary>
         /// <remarks>
-        /// 从 JWT Token 的 givenname claim 中获取，与 LoginService 创建 Token 时的 claim 保持一致
+        /// 从 JWT Token 的 ClaimTypes.GivenName claim 中获取
         /// </remarks>
         public string RealName
         {
             get
             {
-                // 尝试从多个可能的 claim 中获取真实姓名
+                // 从 ClaimTypes.GivenName claim 获取真实姓名
                 return _contextAccessor.HttpContext?.User?.FindFirst(ClaimTypes.GivenName)?.Value
-                    ?? _contextAccessor.HttpContext?.User?.FindFirst("givenname")?.Value
                     ?? string.Empty;
+            }
+        }
+
+        /// <summary>
+        /// 获取当前用户的角色编码列表
+        /// </summary>
+        /// <remarks>
+        /// 从 JWT Token 的 roles claim 中获取
+        /// </remarks>
+        public List<string> Roles
+        {
+            get
+            {
+                // 从 roles claim 获取角色列表（逗号分隔）
+                var rolesClaim = _contextAccessor.HttpContext?.User?.FindFirst("roles")?.Value;
+                if (string.IsNullOrEmpty(rolesClaim))
+                {
+                    return new List<string>();
+                }
+                return rolesClaim.Split(',', StringSplitOptions.RemoveEmptyEntries).ToList();
             }
         }
 

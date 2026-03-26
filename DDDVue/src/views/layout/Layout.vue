@@ -4,7 +4,7 @@ import { RouterLink, useRouter } from 'vue-router'
 import { User, Fold, Expand, Collection, Menu, Setting } from '@element-plus/icons-vue'
 import * as menuApi from '@/api/menu'
 import * as Icons from '@element-plus/icons-vue'
-import { getItem, setItem, removeItem, clearByCategory, StorageKeys } from '@/utils/storage'
+import { getItem, setItem, clearAllCache, StorageKeys } from '@/utils/storage'
 import { showSuccessNotification, showErrorNotification } from '@/utils/notification'
 
 // 菜单数据
@@ -103,11 +103,6 @@ const getIconByName = (iconName: string) => {
   return iconMap[iconName] || null
 }
 
-// 清除菜单缓存（用于菜单更新后刷新）
-const clearMenuCache = () => {
-  removeItem(StorageKeys.SidebarMenu)
-}
-
 // 侧边栏折叠切换
 const toggleSidebar = () => {
   if (isMobile.value) {
@@ -134,7 +129,7 @@ const handleMenuClick = (item: MenuItem) => {
 
 // 退出登录
 const handleLogout = () => {
-  clearByCategory('Login')
+  clearAllCache()
   showSuccessNotification({ title: '成功', message: '已退出登录' })
   router.push('/')
 }
