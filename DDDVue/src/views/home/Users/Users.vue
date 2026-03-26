@@ -537,6 +537,7 @@ const submitRoleForm = async () => {
 
     showSuccessNotification({ title: '成功', message: '角色配置成功' })
     roleDialogVisible.value = false
+    await loadUserData()  // 刷新数据
   } catch (error) {
     console.error('配置角色失败:', error)
     showErrorNotification({ title: '错误', message: '配置角色失败' })

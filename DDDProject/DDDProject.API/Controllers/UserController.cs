@@ -120,4 +120,44 @@ public class UserController : BaseApiController
     {
         return await _userDataService.ResetPasswordAsync(request);
     }
+
+    /// <summary>
+    /// 更新当前用户资料
+    /// </summary>
+    [HttpPut]
+    [ActionName("UpdateProfileAsync")]
+    [ApiSearch(Name = "更新个人资料", Description = "更新当前用户的个人资料", Category = ApiSearchCategory.User)]
+    public async Task<ApiRequestResult> UpdateProfileAsync([FromBody] UpdateProfileRequest request)
+    {
+        var userId = GetCurrentUserId();
+        if (userId == null)
+        {
+            return new ApiRequestResult
+            {
+                Success = false,
+                Message = "未获取到当前用户信息"
+            };
+        }
+        return await _userDataService.UpdateProfileAsync(userId.Value, request);
+    }
+
+    /// <summary>
+    /// 修改当前用户密码
+    /// </summary>
+    [HttpPost]
+    [ActionName("ChangePasswordAsync")]
+    [ApiSearch(Name = "修改密码", Description = "修改当前用户的密码", Category = ApiSearchCategory.User)]
+    public async Task<ApiRequestResult> ChangePasswordAsync([FromBody] ChangePasswordRequest request)
+    {
+        var userId = GetCurrentUserId();
+        if (userId == null)
+        {
+            return new ApiRequestResult
+            {
+                Success = false,
+                Message = "未获取到当前用户信息"
+            };
+        }
+        return await _userDataService.ChangePasswordAsync(userId.Value, request);
+    }
 }

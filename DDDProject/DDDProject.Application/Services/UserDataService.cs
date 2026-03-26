@@ -418,4 +418,138 @@ public class UserDataService : IUserDataService
             };
         }
     }
+
+    /// <summary>
+    /// 更新当前用户资料
+    /// </summary>
+    public async Task<ApiRequestResult> UpdateProfileAsync(Guid userId, UpdateProfileRequest request)
+    {
+        try
+        {
+            var user = await _userRepository.FindAsync(userId);
+            if (user is null)
+            {
+                return new ApiRequestResult
+                {
+                    Success = false,
+                    Message = "用户不存在",
+                    Data = null
+                };
+            }
+
+            // 检查邮箱是否被其他用户使用
+            if (!string.IsNullOrEmpty(request.Email) && request.Email != user.Email)
+            {
+                var existingUser = await _userRepository.GetFirstAsync(u => u.Email == request.Email && u.Id != userId);
+                if (existingUser is not null)
+                {
+                    return new ApiRequestResult
+                    {
+                        Success = false,
+                        Message = "邮箱已被其他用户使用",
+                        Data = null
+                    };
+                }
+            }
+
+            user.Update(
+                request.Email,
+                request.PhoneNumber,
+                request.RealName,
+                request.Avatar,
+                user.Remark
+            );
+
+            _userRepository.Update(user);
+            await _userRepository.SaveChangesAsync();
+
+            return new ApiRequestResult
+            {
+                Success = true,
+                Message = "资料更新成功",
+                Data = new UserDto
+                {
+                    Id = user.Id,
+                    UserName = user.UserName,
+                    Email = user.Email,
+                    PhoneNumber = user.PhoneNumber,
+                    RealName = user.RealName,
+                    Avatar = user.Avatar,
+                    Status = user.Status,
+                    LastLoginTime = user.LastLoginTime,
+                    LastLoginIp = user.LastLoginIp,
+                    Remark = user.Remark,
+                    CreatedAt = user.CreatedAt,
+                    UpdatedAt = user.UpdatedAt
+                }
+            };
+        }
+        catch (Exception ex)
+        {
+            return new ApiRequestResult
+            {
+                Success = false,
+                Message = $"更新资料失败: {ex.Message}",
+                Data = null
+            };
+        }
+    }
+
+    /// <summary>
+    /// 修改当前用户密码
+    /// </summary>
+    public async Task<ApiRequestResult> ChangePasswordAsync(Guid userId, ChangePasswordRequest request)
+    {
+        try
+        {
+            var user = await _userRepository.FindAsync(userId);
+            if (user is null)
+            {
+                return new ApiRequestResult
+                {
+                    Success = false,
+                    Message = "用户不存在",
+                    Data = null
+                };
+            }
+
+            // 解密并验证原密码
+            var decryptedOldPassword = PasswordHelper.DecryptPassword(request.OldPassword);
+            var oldPasswordHash = PasswordHelper.ComputeHash(decryptedOldPassword);
+            
+            if (!user.VerifyPassword(oldPasswordHash))
+            {
+                return new ApiRequestResult
+                {
+                    Success = false,
+                    Message = "原密码错误",
+                    Data = null
+                };
+            }
+
+            // 解密并设置新密码
+            var decryptedNewPassword = PasswordHelper.DecryptPassword(request.NewPassword);
+            var newPasswordHash = PasswordHelper.ComputeHash(decryptedNewPassword);
+            
+            user.UpdatePassword(newPasswordHash);
+            _userRepository.Update(user);
+            await _userRepository.SaveChangesAsync();
+
+            return new ApiRequestResult
+            {
+                Success = true,
+                Message = "密码修改成功",
+                Data = null
+            };
+        }
+        catch (Exception ex)
+        {
+            return new ApiRequestResult
+            {
+                Success = false,
+                Message = $"修改密码失败: {ex.Message}",
+                Data = null
+            };
+        }
+    }
 }

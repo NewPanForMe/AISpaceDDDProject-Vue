@@ -140,6 +140,7 @@ const saveJwtSettings = async () => {
     const response = await batchUpdateSettings({ settings })
     if (response.success) {
       showSuccessNotification({ title: '成功', message: 'JWT 配置保存成功' })
+      await loadSettings()  // 刷新数据
     } else {
       showErrorNotification({ title: '错误', message: response.message || '保存失败' })
     }
@@ -163,6 +164,7 @@ const saveSystemSettings = async () => {
     const response = await batchUpdateSettings({ settings })
     if (response.success) {
       showSuccessNotification({ title: '成功', message: '系统配置保存成功' })
+      await loadSettings()  // 刷新数据
     } else {
       showErrorNotification({ title: '错误', message: response.message || '保存失败' })
     }

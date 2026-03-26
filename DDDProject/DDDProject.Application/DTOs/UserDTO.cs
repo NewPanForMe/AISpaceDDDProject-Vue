@@ -163,3 +163,45 @@ public class ResetPasswordRequest : DTO
     /// </summary>
     public string NewPassword { get; set; } = string.Empty;
 }
+
+/// <summary>
+/// 更新个人资料请求
+/// </summary>
+public class UpdateProfileRequest : DTO
+{
+    /// <summary>
+    /// 邮箱
+    /// </summary>
+    public string? Email { get; set; }
+
+    /// <summary>
+    /// 手机号码
+    /// </summary>
+    public string? PhoneNumber { get; set; }
+
+    /// <summary>
+    /// 真实姓名
+    /// </summary>
+    public string? RealName { get; set; }
+
+    /// <summary>
+    /// 头像
+    /// </summary>
+    public string? Avatar { get; set; }
+}
+
+/// <summary>
+/// 修改密码请求
+/// </summary>
+public class ChangePasswordRequest : DTO
+{
+    /// <summary>
+    /// 原密码
+    /// </summary>
+    public string OldPassword { get; set; } = string.Empty;
+
+    /// <summary>
+    /// 新密码
+    /// </summary>
+    public string NewPassword { get; set; } = string.Empty;
+}

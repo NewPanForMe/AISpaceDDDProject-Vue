@@ -15,7 +15,7 @@
   </thead>
   <tbody>
     <tr>
-      <td rowspan="6">2026-03-26</td>
+      <td rowspan="10">2026-03-26</td>
       <td>新增权限管理模块（Permission），支持按钮级别的权限控制</td>
     </tr>
     <tr>
@@ -32,6 +32,18 @@
     </tr>
     <tr>
       <td>新增缓存更新规则文档，规范操作后更新缓存的流程</td>
+    </tr>
+    <tr>
+      <td>修复登录时权限获取问题，从 PermissionDto[] 中正确提取权限编码</td>
+    </tr>
+    <tr>
+      <td>权限管理页面添加按钮权限控制，模块筛选改为动态获取</td>
+    </tr>
+    <tr>
+      <td>缓存管理页面表格添加操作列，支持单独删除各分类缓存</td>
+    </tr>
+    <tr>
+      <td>完善个人中心页面：基本信息展示、编辑资料、修改密码功能</td>
     </tr>
     <tr>
       <td rowspan="3">2026-03-25</td>
@@ -80,6 +92,8 @@
 | Users | 重置密码功能 | 用户列表操作栏添加重置密码按钮 |
 | Storage | 列表缓存功能 | 用户、角色、菜单、权限列表支持缓存，优先从缓存获取数据 |
 | Role | 删除前检查关联 | 删除角色前检查用户、菜单、权限关联，有关联时禁止删除 |
+| ClearCache | 表格操作列 | 缓存统计表格添加删除操作列，支持单独删除各分类缓存 |
+| Profile | 个人中心完善 | 完整的个人信息展示、编辑资料、修改密码功能 |
 
 #### 新增文件
 
@@ -122,19 +136,25 @@
 - `GET /api/Permission/GetUserPermissionsAsync` - 获取用户权限列表
 - `GET /api/Permission/HasPermissionAsync` - 检查用户是否有指定权限
 
+**UserController 新增接口：**
+- `PUT /api/User/UpdateProfileAsync` - 更新当前用户资料
+- `POST /api/User/ChangePasswordAsync` - 修改当前用户密码
+
 #### 前端优化
 
 | 文件 | 优化内容 |
 |------|---------|
 | `Login.vue` | 登录成功后获取用户权限并存储到 localStorage |
-| `storage.ts` | 新增 Permissions 键、权限工具函数、权限编码常量 |
-| `ClearCache.vue` | 添加权限控制，按钮根据权限显示 |
+| `storage.ts` | 新增 Permissions 键、权限工具函数、权限编码常量、UserDto 类型 |
+| `ClearCache.vue` | 添加权限控制，按钮根据权限显示；表格添加操作列 |
 | `Users.vue` | 添加列表缓存逻辑、权限控制 |
 | `UserRole.vue` | 添加列表缓存逻辑、权限控制、分配权限功能、删除前检查关联 |
 | `Menu.vue` | 添加权限控制 |
 | `System.vue` | 添加权限控制 |
 | `Permissions.vue` | 新增权限管理页面，支持 CRUD 和模块筛选 |
-| `role.ts` | 新增权限相关 API 函数 |
+| `Profile.vue` | 完整重写，添加基本信息展示、编辑资料对话框、修改密码对话框 |
+| `user.ts` | 新增 updateProfile、changePassword API 函数 |
+| `api/index.ts` | 新增 UpdateProfileRequest、ChangePasswordRequest 类型定义 |
 
 #### 后端优化
 
@@ -143,6 +163,10 @@
 | `LoginService.cs` | JWT 配置从数据库获取，登录时检查用户角色状态 |
 | `ApplicationDbContext.cs` | 新增 Permissions 和 RolePermissions DbSet，新增权限种子数据 |
 | `Startup.cs` | 启动时初始化权限种子数据 |
+| `BaseApiController.cs` | 新增 GetCurrentUserId、GetCurrentUserName 方法 |
+| `IUserDataService.cs` | 新增 UpdateProfileAsync、ChangePasswordAsync 接口 |
+| `UserDataService.cs` | 实现更新资料和修改密码逻辑 |
+| `UserDTO.cs` | 新增 UpdateProfileRequest、ChangePasswordRequest DTO |
 
 #### 权限编码常量
 
@@ -152,7 +176,7 @@
 | User | `user:add`, `user:edit`, `user:delete`, `user:reset_password`, `user:assign_role`, `user:enable`, `user:disable` | 用户管理权限 |
 | Role | `role:add`, `role:edit`, `role:delete`, `role:assign_menu`, `role:assign_user`, `role:enable`, `role:disable` | 角色管理权限 |
 | Setting | `setting:save_jwt`, `setting:save_system` | 系统设置权限 |
-| Cache | `cache:clear_login`, `cache:clear_menu`, `cache:clear_list`, `cache:clear_all` | 缓存管理权限 |
+| Cache | `cache:clear_auth`, `cache:clear_user`, `cache:clear_menu`, `cache:clear_list`, `cache:clear_setting`, `cache:clear_all` | 缓存管理权限 |
 
 #### 文档更新
 

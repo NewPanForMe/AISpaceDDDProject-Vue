@@ -36,6 +36,7 @@
                 <el-button v-if="hasPermission(PermissionCodes.ROLE_ASSIGN_MENU)" size="small" type="primary" @click="assignMenus(row)">分配模块</el-button>
                 <el-button v-if="hasPermission(PermissionCodes.ROLE_ASSIGN_PERMISSION)" size="small" type="warning" @click="assignPermissions(row)">分配权限</el-button>
                 <el-button v-if="hasPermission(PermissionCodes.ROLE_ASSIGN_USER)" size="small" type="success" @click="assignUsers(row)">分配用户</el-button>
+              
                 <el-button v-if="hasAnyPermission([PermissionCodes.ROLE_ENABLE, PermissionCodes.ROLE_DISABLE])" size="small" :type="row.status === 1 ? 'warning' : 'success'" @click="toggleRoleStatus(row)">
                   {{ row.status === 1 ? '禁用' : '启用' }}
                 </el-button>
@@ -282,16 +283,17 @@ const permissionForm = ref<{
   selectedPermissionIds: []
 })
 
-// 权限模块列表
-const permissionModules = ['Menu', 'User', 'Role', 'Setting', 'Cache']
+// 权限模块列表（动态从权限数据获取）
+const permissionModules = ref<string[]>([])
 
-// 模块名称映射
+// 模块名称映射（基础映射，可扩展）
 const moduleNameMap: Record<string, string> = {
   Menu: '菜单管理',
   User: '用户管理',
   Role: '角色管理',
   Setting: '系统设置',
-  Cache: '缓存管理'
+  Cache: '缓存管理',
+  Permission: '权限管理'
 }
 
 // 获取模块中文名称
@@ -612,6 +614,7 @@ const submitUserForm = async () => {
 
     showSuccessNotification({ title: '成功', message: '分配用户成功' })
     userDialogVisible.value = false
+    await loadRoleData()  // 刷新数据
   } catch (error) {
     console.error('分配用户失败:', error)
     showErrorNotification({ title: '错误', message: '分配用户失败' })
@@ -675,6 +678,7 @@ const submitMenuForm = async () => {
 
     showSuccessNotification({ title: '成功', message: '分配模块成功' })
     menuDialogVisible.value = false
+    await loadRoleData()  // 刷新数据
   } catch (error) {
     console.error('分配模块失败:', error)
     showErrorNotification({ title: '错误', message: '分配模块失败' })
@@ -689,6 +693,9 @@ const loadAllPermissions = async () => {
     const response = await getAllEnabledPermissions()
     if (response.data) {
       allPermissions.value = response.data
+      // 动态提取模块列表（去重并排序）
+      const modules = [...new Set(response.data.map(p => p.module))].sort()
+      permissionModules.value = modules
     }
   } catch (error) {
     console.error('加载权限列表失败:', error)
@@ -735,6 +742,7 @@ const submitPermissionForm = async () => {
 
     showSuccessNotification({ title: '成功', message: '分配权限成功' })
     permissionDialogVisible.value = false
+    await loadRoleData()  // 刷新数据
   } catch (error) {
     console.error('分配权限失败:', error)
     showErrorNotification({ title: '错误', message: '分配权限失败' })

@@ -81,12 +81,22 @@ public static class MenuSeeder
             path: "users-role",
             component: "UserRole/UserRole",
             icon: "UserFilled",
-            parentId: null,
+            parentId: userMenu.Id,
             sortOrder: 3,
             status: 1
         );
         menus.Add(roleMenu);
-
+        // 3. 角色管理
+        var infoMenu = Menu.Create(
+            name: "用户管理",
+            path: "users-info",
+            component: "Users/Users",
+            icon: "UserFilled",
+            parentId: userMenu.Id,
+            sortOrder: 3,
+            status: 1
+        );
+        menus.Add(infoMenu);
         // 4. 产品管理
         var productMenu = Menu.Create(
             name: "产品管理",
@@ -137,6 +147,18 @@ public static class MenuSeeder
         );
         menus.Add(permissionMenu);
 
+
+        // 系统设置 -> 权限管理
+        var systemMenu = Menu.Create(
+            name: "系统管理",
+            path: "settings-system",
+            component: "Settings/System",
+            icon: "Lock",
+            parentId: settingsMenu.Id,
+            sortOrder: 2,
+            status: 1
+        );
+        menus.Add(systemMenu);
         return menus;
     }
 }

@@ -1,6 +1,6 @@
 import { http } from '@/utils/http'
 import api from '@/api/index'
-import type { PagedResult, UserDto, CreateUserRequest, UpdateUserRequest, ResetPasswordRequest } from '@/api/index'
+import type { PagedResult, UserDto, CreateUserRequest, UpdateUserRequest, ResetPasswordRequest, UpdateProfileRequest, ChangePasswordRequest } from '@/api/index'
 
 // 分页参数接口
 export interface PageParams {
@@ -47,4 +47,14 @@ export const disableUser = (id: string) => {
 // 重置密码
 export const resetPassword = (data: ResetPasswordRequest) => {
   return http.post(api.User.ResetPasswordAsync, data)
+}
+
+// 更新当前用户资料
+export const updateProfile = (data: UpdateProfileRequest) => {
+  return http.put(api.User.UpdateProfileAsync, data)
+}
+
+// 修改当前用户密码
+export const changePassword = (data: ChangePasswordRequest) => {
+  return http.post(api.User.ChangePasswordAsync, data)
 }

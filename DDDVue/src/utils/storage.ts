@@ -2,27 +2,102 @@
  * localStorage 分类管理工具
  * 
  * 分类说明：
- * - Login: 登录相关数据 (token, userInfo)
- * - Menu: 菜单相关数据 (sidebarMenu)
- * - List: 列表数据缓存 (其他列表缓存)
+ * - Auth: 认证相关 (token)
+ * - User: 用户信息 (userInfo, permissions)
+ * - Menu: 菜单相关 (sidebarMenu)
+ * - List: 列表数据缓存 (list_*)
+ * - Setting: 设置相关 (settings_*)
  */
 
 // 定义 localStorage 键名常量
 export const StorageKeys = {
-  // 登录相关
+  // 认证相关
   Token: 'token',
+
+  // 用户信息
   UserInfo: 'userInfo',
-  Permissions: 'permissions', // 用户权限列表
+  Permissions: 'permissions',
 
   // 菜单相关
   SidebarMenu: 'sidebarMenu',
 
   // 列表数据缓存
-  List: 'list', // 列表数据缓存
+  List: 'list',
+
+  // 设置相关
+  Setting: 'settings',
 } as const
 
-// 定义分类类型
-export type StorageCategory = 'Login' | 'Menu' | 'List' | 'All' | 'Other'
+// 用户信息类型（与后端 UserDto 对应）
+export interface UserDto {
+  id?: string
+  userName?: string
+  email?: string
+  phoneNumber?: string
+  realName?: string
+  avatar?: string
+  status?: number
+  lastLoginTime?: string
+  lastLoginIp?: string
+  remark?: string
+  createdAt?: string
+  updatedAt?: string
+}
+
+// 定义分类类型（更细化的分类）
+export type StorageCategory = 'Auth' | 'User' | 'Menu' | 'List' | 'Setting' | 'All'
+
+// 分类配置信息
+export const CategoryConfig = {
+  Auth: {
+    name: '登录认证',
+    description: '用户登录令牌，清除后需要重新登录',
+    icon: 'Key',
+    color: '#E6A23C',
+    keys: [StorageKeys.Token],
+    permission: 'cache:clear_auth'
+  },
+  User: {
+    name: '用户信息',
+    description: '用户基本信息和权限数据',
+    icon: 'User',
+    color: '#409EFF',
+    keys: [StorageKeys.UserInfo, StorageKeys.Permissions],
+    permission: 'cache:clear_user'
+  },
+  Menu: {
+    name: '菜单数据',
+    description: '侧边栏菜单和导航数据',
+    icon: 'Menu',
+    color: '#67C23A',
+    keys: [StorageKeys.SidebarMenu],
+    permission: 'cache:clear_menu'
+  },
+  List: {
+    name: '列表缓存',
+    description: '各模块列表页的数据缓存',
+    icon: 'DataLine',
+    color: '#909399',
+    keys: [], // 动态获取以 'list' 开头的键
+    permission: 'cache:clear_list'
+  },
+  Setting: {
+    name: '系统设置',
+    description: '用户偏好设置和系统配置',
+    icon: 'Setting',
+    color: '#F56C6C',
+    keys: [], // 动态获取以 'settings' 开头的键
+    permission: 'cache:clear_setting'
+  },
+  All: {
+    name: '全部缓存',
+    description: '清除所有本地存储数据',
+    icon: 'Delete',
+    color: '#F56C6C',
+    keys: [],
+    permission: 'cache:clear_all'
+  }
+} as const
 
 /**
  * 获取存储的数据
@@ -67,45 +142,67 @@ export const removeItem = (key: string): void => {
 }
 
 /**
+ * 获取指定分类的所有键名
+ * @param category 分类
+ * @returns 该分类的所有键名数组
+ */
+export const getKeysByCategory = (category: StorageCategory): string[] => {
+  const keys: string[] = []
+  
+  switch (category) {
+    case 'Auth':
+      keys.push(StorageKeys.Token)
+      break
+
+    case 'User':
+      keys.push(StorageKeys.UserInfo, StorageKeys.Permissions)
+      break
+
+    case 'Menu':
+      keys.push(StorageKeys.SidebarMenu)
+      break
+
+    case 'List':
+      // 列表缓存的键名（所有以 'list' 开头的键）
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i)
+        if (key && key.startsWith(StorageKeys.List)) {
+          keys.push(key)
+        }
+      }
+      break
+
+    case 'Setting':
+      // 设置相关的键名（所有以 'settings' 开头的键）
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i)
+        if (key && key.startsWith(StorageKeys.Setting)) {
+          keys.push(key)
+        }
+      }
+      break
+
+    case 'All':
+      // 返回所有键名
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i)
+        if (key) keys.push(key)
+      }
+      break
+  }
+
+  return keys
+}
+
+/**
  * 清除指定分类的存储数据
  * @param category 要清除的分类
  */
 export const clearByCategory = (category: StorageCategory): void => {
   try {
-    switch (category) {
-      case 'Login':
-        // 清除登录相关数据
-        clearAllCache();
-        console.log('已清除 Login 分类的缓存')
-        break
-
-      case 'Menu':
-        // 清除菜单相关数据
-        localStorage.removeItem(StorageKeys.SidebarMenu)
-        console.log('已清除 Menu 分类的缓存')
-        break
-
-      case 'List':
-        // 清除列表数据缓存（所有以 'list' 开头的键）
-        const keysToRemove: string[] = []
-        for (let i = 0; i < localStorage.length; i++) {
-          const key = localStorage.key(i)
-          if (key && key.startsWith(StorageKeys.List)) {
-            keysToRemove.push(key)
-          }
-        }
-        keysToRemove.forEach(key => localStorage.removeItem(key))
-        console.log('已清除 List 分类的缓存')
-        break
-
-      case 'All':
-        // 清除所有数据
-        clearAllCache()
-        break
-
-      default:
-        console.warn(`未知的分类: ${category}`)
-    }
+    const keys = getKeysByCategory(category)
+    keys.forEach(key => localStorage.removeItem(key))
+    console.log(`已清除 ${category} 分类的缓存，共 ${keys.length} 项`)
   } catch (e) {
     console.error(`清除分类缓存失败: ${category}`, e)
   }
@@ -125,43 +222,6 @@ export const clearAllCache = (): void => {
 }
 
 /**
- * 获取指定分类的所有键名
- * @param category 分类
- * @returns 该分类的所有键名数组
- */
-export const getKeysByCategory = (category: StorageCategory): string[] => {
-  switch (category) {
-    case 'Login':
-      return [StorageKeys.Token, StorageKeys.UserInfo]
-
-    case 'Menu':
-      return [StorageKeys.SidebarMenu]
-
-    case 'List':
-      // 列表缓存的键名（所有以 'list' 开头的键）
-      const listKeys: string[] = []
-      for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i)
-        if (key && key.startsWith(StorageKeys.List)) {
-          listKeys.push(key)
-        }
-      }
-      return listKeys
-
-    case 'All':
-      // 返回所有键名
-      const keys: string[] = []
-      for (let i = 0; i < localStorage.length; i++) {
-        keys.push(localStorage.key(i) || '')
-      }
-      return keys
-
-    default:
-      return []
-  }
-}
-
-/**
  * 检查指定分类是否有数据
  * @param category 分类
  * @returns 是否有数据
@@ -176,27 +236,58 @@ export const hasDataByCategory = (category: StorageCategory): boolean => {
  * @returns 包含各分类数据统计的对象
  */
 export const getStorageStats = (): Record<string, number> => {
-  const stats: Record<string, number> = {}
+  const stats: Record<string, number> = {
+    Auth: 0,
+    User: 0,
+    Menu: 0,
+    List: 0,
+    Setting: 0
+  }
 
   for (let i = 0; i < localStorage.length; i++) {
     const key = localStorage.key(i) || ''
-    let category = 'Unknown'
-
-    // 根据键名判断分类
-    if (key === StorageKeys.Token || key === StorageKeys.UserInfo) {
-      category = 'Login'
+    
+    if (key === StorageKeys.Token) {
+      stats.Auth++
+    } else if (key === StorageKeys.UserInfo || key === StorageKeys.Permissions) {
+      stats.User++
     } else if (key === StorageKeys.SidebarMenu) {
-      category = 'Menu'
+      stats.Menu++
     } else if (key.startsWith(StorageKeys.List)) {
-      category = 'List'
-    } else {
-      category = 'Other'
+      stats.List++
+    } else if (key.startsWith(StorageKeys.Setting)) {
+      stats.Setting++
     }
-
-    stats[category] = (stats[category] || 0) + 1
   }
 
   return stats
+}
+
+/**
+ * 获取总缓存数量
+ * @returns 缓存总项数
+ */
+export const getTotalCacheCount = (): number => {
+  return localStorage.length
+}
+
+/**
+ * 获取各分类详细信息
+ * @returns 各分类的详细信息数组
+ */
+export const getCategoryDetails = () => {
+  const stats = getStorageStats()
+  return Object.entries(CategoryConfig)
+    .filter(([key]) => key !== 'All')
+    .map(([key, config]) => ({
+      key: key as StorageCategory,
+      name: config.name,
+      description: config.description,
+      icon: config.icon,
+      color: config.color,
+      count: stats[key] || 0,
+      permission: config.permission
+    }))
 }
 
 // ==================== 权限管理相关函数 ====================
@@ -281,6 +372,7 @@ export const PermissionCodes = {
   ROLE_DELETE: 'role:delete',
   ROLE_ASSIGN_MENU: 'role:assign_menu',
   ROLE_ASSIGN_USER: 'role:assign_user',
+  ROLE_ASSIGN_BUTTON: 'role:assign_button',
   ROLE_ASSIGN_PERMISSION: 'role:assign_permission',
   ROLE_ENABLE: 'role:enable',
   ROLE_DISABLE: 'role:disable',
@@ -289,10 +381,19 @@ export const PermissionCodes = {
   SETTING_SAVE_JWT: 'setting:save_jwt',
   SETTING_SAVE_SYSTEM: 'setting:save_system',
 
+  // 权限管理
+  PERMISSION_ADD: 'permission:add',
+  PERMISSION_EDIT: 'permission:edit',
+  PERMISSION_DELETE: 'permission:delete',
+  PERMISSION_ENABLE: 'permission:enable',
+  PERMISSION_DISABLE: 'permission:disable',
+
   // 缓存管理
-  CACHE_CLEAR_LOGIN: 'cache:clear_login',
+  CACHE_CLEAR_AUTH: 'cache:clear_auth',
+  CACHE_CLEAR_USER: 'cache:clear_user',
   CACHE_CLEAR_MENU: 'cache:clear_menu',
   CACHE_CLEAR_LIST: 'cache:clear_list',
+  CACHE_CLEAR_SETTING: 'cache:clear_setting',
   CACHE_CLEAR_ALL: 'cache:clear_all'
 } as const
 

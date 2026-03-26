@@ -55,6 +55,18 @@ export interface ResetPasswordRequest {
   newPassword: string;
 }
 
+export interface UpdateProfileRequest {
+  email?: string;
+  phoneNumber?: string;
+  realName?: string;
+  avatar?: string;
+}
+
+export interface ChangePasswordRequest {
+  oldPassword: string;
+  newPassword: string;
+}
+
 // ==================== 角色模块 ====================
 export interface RoleDto {
   id: string;
@@ -216,6 +228,8 @@ export interface ApiConfig {
     EnableUserAsync: string;
     DisableUserAsync: string;
     ResetPasswordAsync: string;
+    UpdateProfileAsync: string;
+    ChangePasswordAsync: string;
   };
   Role: {
     GetRolesAsync: string;
@@ -295,6 +309,8 @@ const api: ApiConfig = {
     EnableUserAsync: 'api/User/EnableUserAsync',
     DisableUserAsync: 'api/User/DisableUserAsync',
     ResetPasswordAsync: 'api/User/ResetPasswordAsync',
+    UpdateProfileAsync: 'api/User/UpdateProfileAsync',
+    ChangePasswordAsync: 'api/User/ChangePasswordAsync',
   },
   Role: {
     GetRolesAsync: 'api/Role/GetRolesAsync',

@@ -221,6 +221,18 @@ export const getUserPermissions = (userId: string) => {
   return http.get<PermissionDto[]>(api.Permission.GetUserPermissionsAsync, { params: { userId } })
 }
 
+// 获取用户的权限编码列表
+export const getUserPermissionCodes = async (userId: string) => {
+  const response = await http.get<PermissionDto[]>(api.Permission.GetUserPermissionsAsync, { params: { userId } })
+  if (response.success && response.data) {
+    return {
+      ...response,
+      data: response.data.map(p => p.code)
+    }
+  }
+  return response
+}
+
 // 检查用户是否有指定权限
 export const hasPermission = (userId: string, permissionCode: string) => {
   return http.get<boolean>(api.Permission.HasPermissionAsync, { params: { userId, permissionCode } })

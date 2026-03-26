@@ -115,11 +115,13 @@ const handleSubmit = async () => {
 
       // 获取用户权限
       try {
-        const permissionResponse = await http.get<string[]>(api.Permission.GetUserPermissionsAsync, {
+        const permissionResponse = await http.get<Array<{ code: string }>>(api.Permission.GetUserPermissionsAsync, {
           params: { userId: response.data?.userId }
         })
         if (permissionResponse.success && permissionResponse.data) {
-          setUserPermissions(permissionResponse.data)
+          // 从 PermissionDto[] 中提取 code 字段
+          const permissionCodes = permissionResponse.data.map(p => p.code)
+          setUserPermissions(permissionCodes)
         }
       } catch (permError) {
         console.error('获取用户权限失败:', permError)

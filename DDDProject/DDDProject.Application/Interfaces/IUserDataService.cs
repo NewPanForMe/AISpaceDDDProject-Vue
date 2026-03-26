@@ -46,4 +46,14 @@ public interface IUserDataService : IApplicationService
     /// 重置用户密码
     /// </summary>
     Task<ApiRequestResult> ResetPasswordAsync(ResetPasswordRequest request);
+
+    /// <summary>
+    /// 更新当前用户资料
+    /// </summary>
+    Task<ApiRequestResult> UpdateProfileAsync(Guid userId, UpdateProfileRequest request);
+
+    /// <summary>
+    /// 修改当前用户密码
+    /// </summary>
+    Task<ApiRequestResult> ChangePasswordAsync(Guid userId, ChangePasswordRequest request);
 }

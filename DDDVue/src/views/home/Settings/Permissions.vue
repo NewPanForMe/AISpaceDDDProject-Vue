@@ -9,7 +9,7 @@
                 <el-option v-for="module in moduleOptions" :key="module" :label="module" :value="module" />
               </el-select>
             </div>
-            <el-button class="button" type="primary" @click="addPermission">添加权限</el-button>
+            <el-button v-if="hasPermission(PermissionCodes.PERMISSION_ADD)" class="button" type="primary" @click="addPermission">添加权限</el-button>
           </div>
         </template>
         <el-table :data="permissionList" style="width: 100%" :header-cell-style="{ background: '#f5f7fa', color: '#333' }"
@@ -42,11 +42,10 @@
           <el-table-column label="操作" width="200" fixed="right">
             <template #default="{ row }">
               <div class="table-actions">
-                <el-button size="small" @click="editPermission(row)">编辑</el-button>
-                <el-button size="small" :type="row.status === 1 ? 'warning' : 'success'" @click="togglePermissionStatus(row)">
-                  {{ row.status === 1 ? '禁用' : '启用' }}
-                </el-button>
-                <el-button size="small" type="danger" @click="deletePermissionItem(row)">删除</el-button>
+                <el-button v-if="hasPermission(PermissionCodes.PERMISSION_EDIT)" size="small" @click="editPermission(row)">编辑</el-button>
+                <el-button v-if="hasPermission(PermissionCodes.PERMISSION_ENABLE) && row.status !== 1" size="small" type="success" @click="togglePermissionStatus(row)">启用</el-button>
+                <el-button v-if="hasPermission(PermissionCodes.PERMISSION_DISABLE) && row.status === 1" size="small" type="warning" @click="togglePermissionStatus(row)">禁用</el-button>
+                <el-button v-if="hasPermission(PermissionCodes.PERMISSION_DELETE)" size="small" type="danger" @click="deletePermissionItem(row)">删除</el-button>
               </div>
             </template>
           </el-table-column>
@@ -95,7 +94,7 @@ import { ElMessageBox } from 'element-plus'
 import * as permissionApi from '@/api/role'
 import type { PermissionDto, CreatePermissionRequest, UpdatePermissionRequest } from '@/api/role'
 import { showSuccessNotification, showErrorNotification } from '@/utils/notification'
-import { getItem, setItem, StorageKeys } from '@/utils/storage'
+import { getItem, setItem, StorageKeys, hasPermission, PermissionCodes } from '@/utils/storage'
 
 // 解构导入 API 函数
 const {
@@ -144,8 +143,22 @@ const pagination = ref<Pagination>({
   total: 0
 })
 
-// 模块选项
-const moduleOptions = ['Menu', 'User', 'Role', 'Setting', 'Cache']
+// 模块选项（动态获取）
+const moduleOptions = ref<string[]>([])
+
+// 加载模块选项
+const loadModuleOptions = async () => {
+  try {
+    const response = await permissionApi.getAllEnabledPermissions()
+    if (response.data) {
+      // 从权限数据中提取模块列表（去重并排序）
+      const modules = [...new Set(response.data.map(p => p.module))].sort()
+      moduleOptions.value = modules
+    }
+  } catch (error) {
+    console.error('加载模块选项失败:', error)
+  }
+}
 
 // 权限表单验证规则
 const permissionRules = {
@@ -354,6 +367,7 @@ const handleCurrentChange = (page: number) => {
 }
 
 onMounted(() => {
+  loadModuleOptions()
   loadPermissionData()
 })
 </script>

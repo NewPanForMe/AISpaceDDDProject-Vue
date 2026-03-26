@@ -111,14 +111,20 @@ namespace DDDProject.API
                     // 注意：如果出现待处理的模型更改错误，请先添加新迁移
                     context.Database.Migrate();
 
-                    // 初始化种子数据
+                    // 初始化种子数据（按依赖顺序执行）
+                    // 1. 基础数据
                     context.SeedRoles();
                     context.SeedUsers();
                     context.SeedMenus();
-                    context.SeedUserRoles();
-                    context.SeedSettings();
                     context.SeedPermissions();
-                    logger.LogInformation("数据库初始化完成，角色表、用户表、菜单表、用户角色关联表、系统设置表和权限表已同步并创建了初始数据。");
+                    context.SeedSettings();
+
+                    // 2. 关联数据
+                    context.SeedUserRoles();
+                    context.SeedMenuRoles();
+                    context.SeedRolePermissions();
+
+                    logger.LogInformation("数据库初始化完成，所有种子数据已同步。");
                 }
                 catch (Exception ex)
                 {
