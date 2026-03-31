@@ -118,6 +118,7 @@ namespace DDDProject.API
                     context.SeedMenus();
                     context.SeedPermissions();
                     context.SeedSettings();
+                    context.SeedButtons();
 
                     // 2. 关联数据
                     context.SeedUserRoles();

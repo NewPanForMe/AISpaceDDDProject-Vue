@@ -15,7 +15,8 @@ import { http } from '../utils/http'
 import api from '../api/index'
 import { showSuccessNotification, showErrorNotification } from '../utils/notification'
 import { aesEncrypt } from '../utils/crypto'
-import { setItem, StorageKeys, setUserPermissions } from '@/utils/storage'
+import { setItem, removeItem, StorageKeys, setUserPermissions } from '@/utils/storage'
+import { initRouteConfig } from '@/router/detail'
 
 
 
@@ -31,6 +32,16 @@ interface LoginResponse {
   }
 }
 
+// 注册响应数据定义
+interface RegisterResponse {
+  success: boolean
+  message?: string
+  data?: {
+    id?: string
+    userName?: string
+  }
+}
+
 // 图标组件映射
 const iconComponents = {
   Management,
@@ -42,14 +53,39 @@ const iconComponents = {
 const router = useRouter()
 
 const formRef = ref()
+const registerFormRef = ref()
+const forgotPasswordFormRef = ref()
 
+// 当前模式：'login' | 'register' | 'forgot'
+const currentMode = ref<'login' | 'register' | 'forgot'>('login')
+
+// 登录表单
 const form = ref({
   userName: '',
   password: ''
 })
 
+// 注册表单
+const registerForm = ref({
+  userName: '',
+  password: '',
+  confirmPassword: '',
+  email: '',
+  realName: ''
+})
+
+// 忘记密码表单
+const forgotPasswordForm = ref({
+  userName: '',
+  email: '',
+  newPassword: '',
+  confirmPassword: ''
+})
+
 const rememberMe = ref(false)
 const loading = ref(false)
+const registerLoading = ref(false)
+const forgotPasswordLoading = ref(false)
 
 // 左侧品牌文案
 const brandTexts = ref([
@@ -77,6 +113,70 @@ const rules = {
   ]
 }
 
+// 注册表单验证规则
+const registerRules = {
+  userName: [
+    { required: true, message: '请输入用户名', trigger: 'blur' },
+    { min: 3, max: 20, message: '长度在 3 到 20 个字符', trigger: 'blur' },
+    { pattern: /^[a-zA-Z0-9_]+$/, message: '用户名只能包含字母、数字和下划线', trigger: 'blur' }
+  ],
+  password: [
+    { required: true, message: '请输入密码', trigger: 'blur' },
+    { min: 6, max: 20, message: '长度在 6 到 20 个字符', trigger: 'blur' },
+    { pattern: /^(?=.*[a-zA-Z])(?=.*\d)/, message: '密码必须包含字母和数字', trigger: 'blur' }
+  ],
+  confirmPassword: [
+    { required: true, message: '请确认密码', trigger: 'blur' },
+    {
+      validator: (_rule: any, value: string, callback: Function) => {
+        if (value !== registerForm.value.password) {
+          callback(new Error('两次输入的密码不一致'))
+        } else {
+          callback()
+        }
+      },
+      trigger: 'blur'
+    }
+  ],
+  email: [
+    { required: true, message: '请输入邮箱', trigger: 'blur' },
+    { type: 'email', message: '请输入正确的邮箱地址', trigger: 'blur' }
+  ],
+  realName: [
+    { max: 20, message: '长度不超过 20 个字符', trigger: 'blur' }
+  ]
+}
+
+// 忘记密码表单验证规则
+const forgotPasswordRules = {
+  userName: [
+    { required: true, message: '请输入用户名', trigger: 'blur' },
+    { min: 3, max: 20, message: '长度在 3 到 20 个字符', trigger: 'blur' }
+  ],
+  email: [
+    { required: true, message: '请输入邮箱', trigger: 'blur' },
+    { type: 'email', message: '请输入正确的邮箱地址', trigger: 'blur' }
+  ],
+  newPassword: [
+    { required: true, message: '请输入新密码', trigger: 'blur' },
+    { min: 6, max: 20, message: '长度在 6 到 20 个字符', trigger: 'blur' },
+    { pattern: /^(?=.*[a-zA-Z])(?=.*\d)/, message: '密码必须包含字母和数字', trigger: 'blur' }
+  ],
+  confirmPassword: [
+    { required: true, message: '请确认新密码', trigger: 'blur' },
+    {
+      validator: (_rule: any, value: string, callback: Function) => {
+        if (value !== forgotPasswordForm.value.newPassword) {
+          callback(new Error('两次输入的密码不一致'))
+        } else {
+          callback()
+        }
+      },
+      trigger: 'blur'
+    }
+  ]
+}
+
 const handleSubmit = async () => {
   if (!formRef.value) return
 
@@ -96,6 +196,9 @@ const handleSubmit = async () => {
     })
     // 处理登录结果
     if (response.success) {
+
+      // 清除旧的菜单缓存（确保不同用户看到不同的菜单）
+      removeItem(StorageKeys.SidebarMenu)
 
       // 保存 token
       const token = response.data?.token || ''
@@ -134,8 +237,11 @@ const handleSubmit = async () => {
         message: '欢迎回来，' + response.data?.realName
       })
 
-      // 跳转到首页
-      router.push('/dashboard')
+      // 先初始化路由配置，确保动态路由加载完成
+      await initRouteConfig()
+
+      // 使用 replace 跳转，避免历史记录问题
+      router.replace('/dashboard')
     } else {
       // 登录失败
       showErrorNotification({
@@ -153,6 +259,175 @@ const handleSubmit = async () => {
 
   } finally {
     loading.value = false
+  }
+}
+
+// 切换到注册模式
+const switchToRegister = () => {
+  currentMode.value = 'register'
+  // 重置登录表单
+  form.value = {
+    userName: '',
+    password: ''
+  }
+}
+
+// 切换到登录模式
+const switchToLogin = () => {
+  currentMode.value = 'login'
+  // 重置注册表单
+  registerForm.value = {
+    userName: '',
+    password: '',
+    confirmPassword: '',
+    email: '',
+    realName: ''
+  }
+  // 重置忘记密码表单
+  forgotPasswordForm.value = {
+    userName: '',
+    email: '',
+    newPassword: '',
+    confirmPassword: ''
+  }
+}
+
+// 切换到忘记密码模式
+const switchToForgotPassword = () => {
+  currentMode.value = 'forgot'
+  // 重置登录表单
+  form.value = {
+    userName: '',
+    password: ''
+  }
+}
+
+// 注册处理
+const handleRegister = async () => {
+  if (!registerFormRef.value) return
+
+  registerLoading.value = true
+  try {
+    // 验证表单
+    await registerFormRef.value.validate((valid: boolean) => {
+      if (!valid) {
+        throw new Error('表单验证失败')
+      }
+    })
+
+    // 调用注册接口
+    const response = await http.post<RegisterResponse>(api.User.CreateUserAsync, {
+      userName: registerForm.value.userName,
+      password: aesEncrypt(registerForm.value.password),
+      email: registerForm.value.email,
+      realName: registerForm.value.realName || undefined
+    })
+
+    // 处理注册结果
+    if (response.success) {
+      showSuccessNotification({
+        title: '注册成功',
+        message: '账号已创建，请登录'
+      })
+
+      // 切换到登录模式并填充用户名
+      switchToLogin()
+      form.value.userName = registerForm.value.userName
+      form.value.password = ''
+    } else {
+      showErrorNotification({
+        title: '注册失败',
+        message: response.message || '注册失败，请稍后重试'
+      })
+    }
+  } catch (error: any) {
+    console.error('注册错误:', error)
+    const errorMessage = error?.message || '注册失败，请稍后重试'
+    showErrorNotification({
+      title: '注册失败',
+      message: errorMessage
+    })
+  } finally {
+    registerLoading.value = false
+  }
+}
+
+// 忘记密码处理
+const handleForgotPassword = async () => {
+  if (!forgotPasswordFormRef.value) return
+
+  forgotPasswordLoading.value = true
+  try {
+    // 验证表单
+    await forgotPasswordFormRef.value.validate((valid: boolean) => {
+      if (!valid) {
+        throw new Error('表单验证失败')
+      }
+    })
+
+    // 调用重置密码接口
+    // 这里使用 UpdateUserAsync 接口来更新密码
+    // 首先需要获取用户ID
+    const userResponse = await http.post<{
+      success: boolean
+      message?: string
+      data?: { id?: string; email?: string }
+    }>('api/User/GetUserByUserNameAsync', {
+      userName: forgotPasswordForm.value.userName
+    })
+
+    if (!userResponse.success || !userResponse.data?.id) {
+      showErrorNotification({
+        title: '验证失败',
+        message: '用户名不存在'
+      })
+      return
+    }
+
+    // 验证邮箱是否匹配
+    if (userResponse.data.email !== forgotPasswordForm.value.email) {
+      showErrorNotification({
+        title: '验证失败',
+        message: '邮箱与用户名不匹配'
+      })
+      return
+    }
+
+    // 调用重置密码接口
+    const response = await http.post<{
+      success: boolean
+      message?: string
+    }>(api.User.ResetPasswordAsync, {
+      id: userResponse.data.id,
+      newPassword: aesEncrypt(forgotPasswordForm.value.newPassword)
+    })
+
+    // 处理重置结果
+    if (response.success) {
+      showSuccessNotification({
+        title: '密码重置成功',
+        message: '请使用新密码登录'
+      })
+
+      // 切换到登录模式并填充用户名
+      switchToLogin()
+      form.value.userName = forgotPasswordForm.value.userName
+      form.value.password = ''
+    } else {
+      showErrorNotification({
+        title: '密码重置失败',
+        message: response.message || '密码重置失败，请稍后重试'
+      })
+    }
+  } catch (error: any) {
+    console.error('密码重置错误:', error)
+    const errorMessage = error?.message || '密码重置失败，请稍后重试'
+    showErrorNotification({
+      title: '密码重置失败',
+      message: errorMessage
+    })
+  } finally {
+    forgotPasswordLoading.value = false
   }
 }
 
@@ -236,41 +511,126 @@ onMounted(() => {
       </div>
     </div>
 
-    <!-- 右侧浮动登录表单 -->
+    <!-- 右侧浮动登录/注册表单 -->
     <div class="login-form-float">
       <div class="login-card">
-        <div class="form-header">
-          <h2 class="form-title">欢迎登录</h2>
-          <p class="form-subtitle">请输入您的账号和密码</p>
-        </div>
+        <!-- 登录表单 -->
+        <template v-if="currentMode === 'login'">
+          <div class="form-header">
+            <h2 class="form-title">欢迎登录</h2>
+            <p class="form-subtitle">请输入您的账号和密码</p>
+          </div>
 
-        <el-form ref="formRef" :model="form" :rules="rules" class="login-form" size="large">
-          <el-form-item prop="userName">
-            <el-input v-model="form.userName" placeholder="用户名" prefix-icon="User" clearable />
-          </el-form-item>
+          <el-form ref="formRef" :model="form" :rules="rules" class="login-form" size="large">
+            <el-form-item prop="userName">
+              <el-input v-model="form.userName" placeholder="用户名" prefix-icon="User" clearable />
+            </el-form-item>
 
-          <el-form-item prop="password">
-            <el-input v-model="form.password" type="password" placeholder="密码" prefix-icon="Lock" show-password
-              clearable />
-          </el-form-item>
+            <el-form-item prop="password">
+              <el-input v-model="form.password" type="password" placeholder="密码" prefix-icon="Lock" show-password
+                clearable />
+            </el-form-item>
 
-          <el-form-item>
-            <el-checkbox v-model="rememberMe">记住我</el-checkbox>
-          </el-form-item>
+            <el-form-item>
+              <el-checkbox v-model="rememberMe">记住我</el-checkbox>
+            </el-form-item>
 
-          <el-form-item>
-            <el-button type="primary" class="login-btn" :loading="loading" @click="handleSubmit">
-              登录
-            </el-button>
-          </el-form-item>
-        </el-form>
+            <el-form-item>
+              <el-button type="primary" class="login-btn" :loading="loading" @click="handleSubmit">
+                登录
+              </el-button>
+            </el-form-item>
+          </el-form>
 
-        <div class="form-footer">
-          <span>还没有账号？</span>
-          <el-link type="primary" class="register-link">立即注册</el-link>
-          <span style="margin: 0 10px;">|</span>
-          <el-link type="primary" class="register-link">忘记密码？</el-link>
-        </div>
+          <div class="form-footer">
+            <span>还没有账号？</span>
+            <el-link type="primary" class="register-link" @click="switchToRegister">立即注册</el-link>
+            <span style="margin: 0 10px;">|</span>
+            <el-link type="primary" class="register-link" @click="switchToForgotPassword">忘记密码？</el-link>
+          </div>
+        </template>
+
+        <!-- 注册表单 -->
+        <template v-else-if="currentMode === 'register'">
+          <div class="form-header">
+            <h2 class="form-title">创建账号</h2>
+            <p class="form-subtitle">填写以下信息完成注册</p>
+          </div>
+
+          <el-form ref="registerFormRef" :model="registerForm" :rules="registerRules" class="login-form" size="large">
+            <el-form-item prop="userName">
+              <el-input v-model="registerForm.userName" placeholder="用户名" prefix-icon="User" clearable />
+            </el-form-item>
+
+            <el-form-item prop="email">
+              <el-input v-model="registerForm.email" placeholder="邮箱" prefix-icon="Message" clearable />
+            </el-form-item>
+
+            <el-form-item prop="realName">
+              <el-input v-model="registerForm.realName" placeholder="真实姓名（选填）" prefix-icon="UserFilled" clearable />
+            </el-form-item>
+
+            <el-form-item prop="password">
+              <el-input v-model="registerForm.password" type="password" placeholder="密码" prefix-icon="Lock" show-password
+                clearable />
+            </el-form-item>
+
+            <el-form-item prop="confirmPassword">
+              <el-input v-model="registerForm.confirmPassword" type="password" placeholder="确认密码" prefix-icon="Lock"
+                show-password clearable />
+            </el-form-item>
+
+            <el-form-item>
+              <el-button type="primary" class="login-btn" :loading="registerLoading" @click="handleRegister">
+                注册
+              </el-button>
+            </el-form-item>
+          </el-form>
+
+          <div class="form-footer">
+            <span>已有账号？</span>
+            <el-link type="primary" class="register-link" @click="switchToLogin">立即登录</el-link>
+          </div>
+        </template>
+
+        <!-- 忘记密码表单 -->
+        <template v-else-if="currentMode === 'forgot'">
+          <div class="form-header">
+            <h2 class="form-title">重置密码</h2>
+            <p class="form-subtitle">验证身份后设置新密码</p>
+          </div>
+
+          <el-form ref="forgotPasswordFormRef" :model="forgotPasswordForm" :rules="forgotPasswordRules" class="login-form" size="large">
+            <el-form-item prop="userName">
+              <el-input v-model="forgotPasswordForm.userName" placeholder="用户名" prefix-icon="User" clearable />
+            </el-form-item>
+
+            <el-form-item prop="email">
+              <el-input v-model="forgotPasswordForm.email" placeholder="注册邮箱" prefix-icon="Message" clearable />
+            </el-form-item>
+
+            <el-form-item prop="newPassword">
+              <el-input v-model="forgotPasswordForm.newPassword" type="password" placeholder="新密码" prefix-icon="Lock" show-password
+                clearable />
+            </el-form-item>
+
+            <el-form-item prop="confirmPassword">
+              <el-input v-model="forgotPasswordForm.confirmPassword" type="password" placeholder="确认新密码" prefix-icon="Lock"
+                show-password clearable />
+            </el-form-item>
+
+            <el-form-item>
+              <el-button type="primary" class="login-btn" :loading="forgotPasswordLoading" @click="handleForgotPassword">
+                重置密码
+              </el-button>
+            </el-form-item>
+          </el-form>
+
+          <div class="form-footer">
+            <span>想起密码了？</span>
+            <el-link type="primary" class="register-link" @click="switchToLogin">立即登录</el-link>
+          </div>
+        </template>
       </div>
     </div>
   </div>

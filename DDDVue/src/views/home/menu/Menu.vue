@@ -4,7 +4,7 @@
       <el-card class="menu-card">
         <template #header>
           <div class="card-header">
-            <el-button v-if="hasPermission(PermissionCodes.MENU_ADD)" class="button" type="primary" @click="addMenu">添加菜单</el-button>
+            <el-button v-if="hasBtn('menu:add')" class="button" type="primary" @click="addMenu">添加菜单</el-button>
           </div>
         </template>
         <el-table :data="menuList" style="width: 100%" row-key="id"
@@ -35,9 +35,9 @@
           <el-table-column label="操作" width="200" fixed="right">
             <template #default="{ row }">
               <div class="table-actions">
-                <el-button v-if="hasPermission(PermissionCodes.MENU_EDIT)" size="small" @click="editMenu(row)">编辑</el-button>
-                <el-button v-if="hasPermission(PermissionCodes.MENU_DELETE)" size="small" type="danger" @click="deleteMenu(row.id)">删除</el-button>
-                <el-button v-if="hasPermission(PermissionCodes.MENU_ADD_CHILD)" size="small" type="primary" @click="addChildMenu(row)">子菜单</el-button>
+                <el-button v-if="hasBtn('menu:edit')" size="small" @click="editMenu(row)">编辑</el-button>
+                <el-button v-if="hasBtn('menu:delete')" size="small" type="danger" @click="deleteMenu(row.id)">删除</el-button>
+                <el-button v-if="hasBtn('menu:add_child')" size="small" type="primary" @click="addChildMenu(row)">子菜单</el-button>
               </div>
             </template>
           </el-table-column>
@@ -107,11 +107,15 @@ import { ElMessageBox } from 'element-plus'
 import * as menuApi from '@/api/menu'
 import type { PageParams, MenuTree } from '@/api/menu'
 import * as Icons from '@element-plus/icons-vue'
-import { removeItem, setItem, getItem, StorageKeys, hasPermission, PermissionCodes } from '@/utils/storage'
+import { removeItem, setItem, getItem, StorageKeys } from '@/utils/storage'
 import { showSuccessNotification, showErrorNotification } from '@/utils/notification'
+import { useButtons } from '@/utils/buttons'
 
 // 解构导入 API 函数
 const { getPagedMenuTree, addMenu: addMenuApi, updateMenu: updateMenuApi, deleteMenu: deleteMenuApi } = menuApi
+
+// 按钮管理
+const { hasBtn } = useButtons('settings-menu')
 
 // 菜单数据类型（使用 API 定义的 MenuTree 类型）
 type Menu = MenuTree

@@ -15,6 +15,25 @@
   </thead>
   <tbody>
     <tr>
+      <td rowspan="6">2026-03-31</td>
+      <td>新增按钮管理模块（Button），支持页面按钮的统一管理</td>
+    </tr>
+    <tr>
+      <td>新增按钮权限设计规范，页面按钮显示由按钮数据决定</td>
+    </tr>
+    <tr>
+      <td>修改分配权限页面，数据来源改为按钮信息，按菜单分组显示</td>
+    </tr>
+    <tr>
+      <td>修改所有列表页按钮，使用 `hasBtn()` 替代 `hasPermission()` 进行权限控制</td>
+    </tr>
+    <tr>
+      <td>新增 `useButtons` 组合式函数，简化按钮权限管理</td>
+    </tr>
+    <tr>
+      <td>新增按钮种子数据生成器，根据菜单自动生成按钮</td>
+    </tr>
+    <tr>
       <td rowspan="10">2026-03-26</td>
       <td>新增权限管理模块（Permission），支持按钮级别的权限控制</td>
     </tr>
@@ -772,6 +791,123 @@ const toggleStatus = async (row: Item) => {
 - `loadData()` 方法内部已实现缓存逻辑，调用后会自动更新缓存
 - 所有数据变更操作（增删改、状态变更）后都必须调用 `loadData()` 刷新缓存
 - 确保用户看到的数据始终是最新的
+
+#### 5.3.4 按钮权限设计规范
+
+**核心原则：页面按钮的显示/隐藏由按钮数据决定，而非权限编码**
+
+**设计思路：**
+
+1. 按钮数据存储在数据库 `Buttons` 表中，与菜单关联
+2. 页面加载时，根据当前菜单路径获取该菜单下的所有按钮
+3. 通过按钮编码判断按钮是否显示
+
+**按钮数据结构：**
+
+```typescript
+interface ButtonDto {
+  id: string
+  name: string          // 按钮名称，如"添加用户"
+  code: string          // 按钮编码，如"user:add"
+  menuId: string        // 所属菜单ID
+  menuName?: string     // 所属菜单名称
+  permissionCode?: string // 关联的权限编码
+  icon?: string         // 按钮图标
+  sortOrder: number     // 排序号
+  status: number        // 状态：1-启用，0-禁用
+}
+```
+
+**按钮管理工具（`src/utils/buttons.ts`）：**
+
+```typescript
+import { useButtons } from '@/utils/buttons'
+
+// 在组件中使用
+const { hasBtn, hasAnyBtn } = useButtons('users')  // 传入当前菜单路径
+
+// 单个按钮权限检查
+<el-button v-if="hasBtn('user:add')">添加用户</el-button>
+
+// 多个按钮权限检查（任意一个）
+<el-button v-if="hasAnyBtn(['user:enable', 'user:disable'])">启用/禁用</el-button>
+```
+
+**API 接口：**
+
+| 接口 | 说明 |
+|------|------|
+| `GET /api/Button/GetButtonsAsync` | 获取按钮列表（分页，支持按菜单筛选） |
+| `GET /api/Button/GetButtonsByMenuIdAsync` | 根据菜单ID获取按钮列表 |
+| `POST /api/Button/CreateButtonAsync` | 创建按钮 |
+| `PUT /api/Button/UpdateButtonAsync` | 更新按钮 |
+| `DELETE /api/Button/DeleteButtonAsync` | 删除按钮 |
+| `POST /api/Button/EnableButtonAsync` | 启用按钮 |
+| `POST /api/Button/DisableButtonAsync` | 禁用按钮 |
+
+**按钮编码命名规范：**
+
+按钮编码格式为 `模块:操作`，例如：
+
+| 模块 | 按钮编码 | 说明 |
+|------|----------|------|
+| 用户管理 | `user:add`, `user:edit`, `user:delete`, `user:reset_password`, `user:assign_role`, `user:enable`, `user:disable` | 用户相关操作 |
+| 角色管理 | `role:add`, `role:edit`, `role:delete`, `role:assign_menu`, `role:assign_user`, `role:assign_permission`, `role:enable`, `role:disable` | 角色相关操作 |
+| 菜单管理 | `menu:add`, `menu:edit`, `menu:delete`, `menu:add_child` | 菜单相关操作 |
+| 权限管理 | `permission:add`, `permission:edit`, `permission:delete`, `permission:enable`, `permission:disable` | 权限相关操作 |
+| 按钮管理 | `button:add`, `button:edit`, `button:delete`, `button:enable`, `button:disable` | 按钮相关操作 |
+| 系统设置 | `setting:save_jwt`, `setting:save_system` | 系统配置操作 |
+| 缓存管理 | `cache:clear_auth`, `cache:clear_user`, `cache:clear_menu`, `cache:clear_list`, `cache:clear_setting`, `cache:clear_all` | 缓存清理操作 |
+
+**完整使用示例：**
+
+```vue
+<template>
+  <div class="user-container">
+    <!-- 顶部操作按钮 -->
+    <el-button v-if="hasBtn('user:add')" type="primary" @click="addUser">添加用户</el-button>
+
+    <!-- 表格操作列 -->
+    <el-table-column label="操作" width="200">
+      <template #default="{ row }">
+        <el-button v-if="hasBtn('user:edit')" size="small" @click="editUser(row)">编辑</el-button>
+        <el-button v-if="hasBtn('user:delete')" size="small" type="danger" @click="deleteUser(row)">删除</el-button>
+        <el-button v-if="hasAnyBtn(['user:enable', 'user:disable'])" size="small" @click="toggleStatus(row)">
+          {{ row.status === 1 ? '禁用' : '启用' }}
+        </el-button>
+      </template>
+    </el-table-column>
+  </div>
+</template>
+
+<script setup lang="ts">
+import { useButtons } from '@/utils/buttons'
+
+const { hasBtn, hasAnyBtn } = useButtons('users')
+</script>
+```
+
+**按钮种子数据生成：**
+
+按钮种子数据根据菜单自动生成，在 `ButtonSeeder.cs` 中配置：
+
+```csharp
+// 根据菜单路径生成对应的按钮
+switch (menu.Path)
+{
+    case "users":
+        buttons.Add(CreateButton("添加用户", "user:add", menu.Id, "Plus", 1));
+        buttons.Add(CreateButton("编辑用户", "user:edit", menu.Id, "Edit", 2));
+        buttons.Add(CreateButton("删除用户", "user:delete", menu.Id, "Delete", 3));
+        break;
+}
+```
+
+**注意事项：**
+
+- 按钮数据会被缓存到 localStorage，键名格式：`button_menuPath`
+- 新增菜单时，需要在 `ButtonSeeder.cs` 中添加对应的按钮生成逻辑
+- 按钮的 `permissionCode` 应与权限表中的权限编码一致，用于权限分配
 
 ---
 

@@ -122,6 +122,17 @@ public class RoleController : BaseApiController
     }
 
     /// <summary>
+    /// 获取用户的角色详情列表
+    /// </summary>
+    [HttpGet]
+    [ActionName("GetUserRolesAsync")]
+    [ApiSearch(Name = "获取用户角色详情", Description = "获取指定用户的角色详情列表", Category = ApiSearchCategory.Role)]
+    public async Task<ApiRequestResult> GetUserRolesAsync([FromQuery] Guid userId)
+    {
+        return await _roleService.GetUserRolesAsync(userId);
+    }
+
+    /// <summary>
     /// 配置用户角色
     /// </summary>
     [HttpPost]
@@ -265,10 +276,13 @@ public class PermissionController : BaseApiController
     /// </summary>
     [HttpGet]
     [ActionName("GetPermissionsAsync")]
-    [ApiSearch(Name = "获取权限列表", Description = "分页获取权限列表", Category = ApiSearchCategory.Role)]
-    public async Task<ApiRequestResult> GetPermissionsAsync([FromQuery] int pageNum = 1, [FromQuery] int pageSize = 10)
+    [ApiSearch(Name = "获取权限列表", Description = "分页获取权限列表，支持按模块筛选", Category = ApiSearchCategory.Role)]
+    public async Task<ApiRequestResult> GetPermissionsAsync(
+        [FromQuery] int pageNum = 1,
+        [FromQuery] int pageSize = 10,
+        [FromQuery] string? module = null)
     {
-        return await _permissionService.GetPermissionsAsync(new PagedRequest { PageNumber = pageNum, PageSize = pageSize });
+        return await _permissionService.GetPermissionsAsync(new PagedRequest { PageNumber = pageNum, PageSize = pageSize }, module);
     }
 
     /// <summary>

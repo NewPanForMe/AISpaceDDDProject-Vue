@@ -51,6 +51,20 @@
                 {{ userInfo.status === 1 ? '正常' : '禁用' }}
               </el-tag>
             </el-descriptions-item>
+            <el-descriptions-item label="角色" :span="2">
+              <div class="role-tags">
+                <el-tag v-if="userRoles.length === 0" type="info" size="small">未分配角色</el-tag>
+                <el-tag
+                  v-for="role in userRoles"
+                  :key="role.id"
+                  :type="role.code === 'SUPER_ADMIN' ? 'danger' : role.code === 'ADMIN' ? 'warning' : 'primary'"
+                  size="small"
+                  class="role-tag"
+                >
+                  {{ role.name }}
+                </el-tag>
+              </div>
+            </el-descriptions-item>
           </el-descriptions>
         </div>
 
@@ -174,6 +188,8 @@ import { ElMessage, type FormInstance, type FormRules } from 'element-plus'
 import { User, Clock, Edit, Lock, RefreshRight } from '@element-plus/icons-vue'
 import { getItem, setItem, StorageKeys, type UserDto } from '@/utils/storage'
 import { updateProfile, changePassword, getUserById } from '@/api/user'
+import { getUserRoles } from '@/api/role'
+import type { RoleDto } from '@/api/index'
 import { showSuccessNotification, showErrorNotification } from '@/utils/notification'
 import { aesEncrypt } from '@/utils/crypto'
 
@@ -194,6 +210,9 @@ const userInfo = ref<UserDto>({
   createdAt: '',
   updatedAt: ''
 })
+
+// 用户角色列表
+const userRoles = ref<RoleDto[]>([])
 
 // 头像文字
 const avatarText = computed(() => {
@@ -288,6 +307,12 @@ const getUserInfo = async () => {
           avatar: response.data.avatar,
           status: response.data.status
         })
+
+        // 获取用户角色
+        const rolesResponse = await getUserRoles(response.data.id)
+        if (rolesResponse.success && rolesResponse.data) {
+          userRoles.value = rolesResponse.data
+        }
       } else {
         // 如果获取失败，使用本地存储的信息
         userInfo.value = {
@@ -300,6 +325,16 @@ const getUserInfo = async () => {
           status: storedInfo.status || 1,
           createdAt: '',
           updatedAt: ''
+        }
+
+        // 尝试获取用户角色
+        try {
+          const rolesResponse = await getUserRoles(storedInfo.userId)
+          if (rolesResponse.success && rolesResponse.data) {
+            userRoles.value = rolesResponse.data
+          }
+        } catch {
+          userRoles.value = []
         }
       }
     } catch {
@@ -315,6 +350,7 @@ const getUserInfo = async () => {
         createdAt: '',
         updatedAt: ''
       }
+      userRoles.value = []
     }
   }
 }
@@ -499,6 +535,17 @@ onMounted(() => {
   display: flex;
   gap: 12px;
   margin-top: 20px;
+}
+
+/* 角色标签样式 */
+.role-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.role-tag {
+  margin: 0;
 }
 
 /* 描述列表样式 */

@@ -527,6 +527,71 @@ public class RoleService : IRoleService
     }
 
     /// <summary>
+    /// 获取用户的角色详情列表
+    /// </summary>
+    public async Task<ApiRequestResult> GetUserRolesAsync(Guid userId)
+    {
+        try
+        {
+            var user = await _userRepository.FindAsync(userId);
+            if (user is null)
+            {
+                return new ApiRequestResult
+                {
+                    Success = false,
+                    Message = "用户不存在",
+                    Data = null
+                };
+            }
+
+            // 获取用户的角色关联
+            var userRoles = await _userRoleRepository.GetListAsync(ur => ur.UserId == userId);
+            var roleIds = userRoles.Select(ur => ur.RoleId).ToList();
+
+            if (roleIds.Count == 0)
+            {
+                return new ApiRequestResult
+                {
+                    Success = true,
+                    Message = "用户没有分配角色",
+                    Data = new List<RoleDto>()
+                };
+            }
+
+            // 获取角色详情
+            var roles = await _roleRepository.GetListAsync(r => roleIds.Contains(r.Id));
+            var roleDtos = roles.Select(r => new RoleDto
+            {
+                Id = r.Id,
+                Name = r.Name,
+                Code = r.Code,
+                Description = r.Description,
+                Status = r.Status,
+                SortOrder = r.SortOrder,
+                Remark = r.Remark,
+                CreatedAt = r.CreatedAt,
+                UpdatedAt = r.UpdatedAt
+            }).ToList();
+
+            return new ApiRequestResult
+            {
+                Success = true,
+                Message = "获取用户角色成功",
+                Data = roleDtos
+            };
+        }
+        catch (Exception ex)
+        {
+            return new ApiRequestResult
+            {
+                Success = false,
+                Message = $"获取用户角色失败: {ex.Message}",
+                Data = null
+            };
+        }
+    }
+
+    /// <summary>
     /// 配置用户角色
     /// </summary>
     public async Task<ApiRequestResult> AssignUserRolesAsync(Guid userId, List<Guid> roleIds)
@@ -967,14 +1032,22 @@ public class PermissionService : IPermissionService
     /// <summary>
     /// 获取权限列表（分页）
     /// </summary>
-    public async Task<ApiRequestResult> GetPermissionsAsync(PagedRequest request)
+    public async Task<ApiRequestResult> GetPermissionsAsync(PagedRequest request, string? module = null)
     {
         try
         {
             var skipCount = (request.PageNumber - 1) * request.PageSize;
-            var total = await _permissionRepository.CountAsync(p => true);
+
+            // 构建筛选条件
+            System.Linq.Expressions.Expression<Func<Permission, bool>> predicate = p => true;
+            if (!string.IsNullOrWhiteSpace(module))
+            {
+                predicate = p => p.Module == module;
+            }
+
+            var total = await _permissionRepository.CountAsync(predicate);
             var permissions = await _permissionRepository.GetListAsync(
-                p => true,
+                predicate,
                 q => q.OrderBy(p => p.Module).ThenBy(p => p.SortOrder),
                 skipCount,
                 request.PageSize

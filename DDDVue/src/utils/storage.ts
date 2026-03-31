@@ -394,7 +394,14 @@ export const PermissionCodes = {
   CACHE_CLEAR_MENU: 'cache:clear_menu',
   CACHE_CLEAR_LIST: 'cache:clear_list',
   CACHE_CLEAR_SETTING: 'cache:clear_setting',
-  CACHE_CLEAR_ALL: 'cache:clear_all'
+  CACHE_CLEAR_ALL: 'cache:clear_all',
+
+  // 按钮管理
+  BUTTON_ADD: 'button:add',
+  BUTTON_EDIT: 'button:edit',
+  BUTTON_DELETE: 'button:delete',
+  BUTTON_ENABLE: 'button:enable',
+  BUTTON_DISABLE: 'button:disable'
 } as const
 
 /**

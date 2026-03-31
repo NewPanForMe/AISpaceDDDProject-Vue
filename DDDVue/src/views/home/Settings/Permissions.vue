@@ -9,7 +9,7 @@
                 <el-option v-for="module in moduleOptions" :key="module" :label="module" :value="module" />
               </el-select>
             </div>
-            <el-button v-if="hasPermission(PermissionCodes.PERMISSION_ADD)" class="button" type="primary" @click="addPermission">添加权限</el-button>
+            <el-button v-if="hasBtn('permission:add')" class="button" type="primary" @click="addPermission">添加权限</el-button>
           </div>
         </template>
         <el-table :data="permissionList" style="width: 100%" :header-cell-style="{ background: '#f5f7fa', color: '#333' }"
@@ -42,10 +42,10 @@
           <el-table-column label="操作" width="200" fixed="right">
             <template #default="{ row }">
               <div class="table-actions">
-                <el-button v-if="hasPermission(PermissionCodes.PERMISSION_EDIT)" size="small" @click="editPermission(row)">编辑</el-button>
-                <el-button v-if="hasPermission(PermissionCodes.PERMISSION_ENABLE) && row.status !== 1" size="small" type="success" @click="togglePermissionStatus(row)">启用</el-button>
-                <el-button v-if="hasPermission(PermissionCodes.PERMISSION_DISABLE) && row.status === 1" size="small" type="warning" @click="togglePermissionStatus(row)">禁用</el-button>
-                <el-button v-if="hasPermission(PermissionCodes.PERMISSION_DELETE)" size="small" type="danger" @click="deletePermissionItem(row)">删除</el-button>
+                <el-button v-if="hasBtn('permission:edit')" size="small" @click="editPermission(row)">编辑</el-button>
+                <el-button v-if="hasBtn('permission:enable') && row.status !== 1" size="small" type="success" @click="togglePermissionStatus(row)">启用</el-button>
+                <el-button v-if="hasBtn('permission:disable') && row.status === 1" size="small" type="warning" @click="togglePermissionStatus(row)">禁用</el-button>
+                <el-button v-if="hasBtn('permission:delete')" size="small" type="danger" @click="deletePermissionItem(row)">删除</el-button>
               </div>
             </template>
           </el-table-column>
@@ -94,7 +94,8 @@ import { ElMessageBox } from 'element-plus'
 import * as permissionApi from '@/api/role'
 import type { PermissionDto, CreatePermissionRequest, UpdatePermissionRequest } from '@/api/role'
 import { showSuccessNotification, showErrorNotification } from '@/utils/notification'
-import { getItem, setItem, StorageKeys, hasPermission, PermissionCodes } from '@/utils/storage'
+import { getItem, setItem, StorageKeys } from '@/utils/storage'
+import { useButtons } from '@/utils/buttons'
 
 // 解构导入 API 函数
 const {
@@ -105,6 +106,9 @@ const {
   enablePermission,
   disablePermission
 } = permissionApi
+
+// 按钮管理
+const { hasBtn, hasAnyBtn } = useButtons('settings-permissions')
 
 // 权限表单类型
 interface PermissionForm {
@@ -193,26 +197,24 @@ const formatDateTime = (dateStr: string) => {
 // 加载权限数据
 const loadPermissionData = async (forceRefresh: boolean = false) => {
   try {
-    const params = {
+    const params: PageParams = {
       pageNum: pagination.value.pageNum,
       pageSize: pagination.value.pageSize
     }
 
-    // 生成缓存键（包含分页参数）
-    const cacheKey = `${StorageKeys.List}_permission_${params.pageNum}_${params.pageSize}`
+    // 如果有模块筛选，添加到参数中
+    if (filterModule.value) {
+      params.module = filterModule.value
+    }
+
+    // 生成缓存键（包含分页参数和筛选条件）
+    const cacheKey = `${StorageKeys.List}_permission_${params.pageNum}_${params.pageSize}_${filterModule.value || 'all'}`
 
     // 如果不是强制刷新，优先从缓存获取
     if (!forceRefresh) {
       const cachedData = getItem<{ list: PermissionDto[], total: number }>(cacheKey)
       if (cachedData) {
-        let list = cachedData.list || []
-        
-        // 如果有模块筛选
-        if (filterModule.value) {
-          list = list.filter(p => p.module === filterModule.value)
-        }
-        
-        permissionList.value = list
+        permissionList.value = cachedData.list || []
         pagination.value.total = cachedData.total || 0
         return
       }
@@ -221,14 +223,7 @@ const loadPermissionData = async (forceRefresh: boolean = false) => {
     // 缓存不存在或强制刷新，从 API 获取
     const response = await getPermissions(params)
     if (response.data) {
-      let list = response.data.list || []
-
-      // 如果有模块筛选
-      if (filterModule.value) {
-        list = list.filter(p => p.module === filterModule.value)
-      }
-
-      permissionList.value = list
+      permissionList.value = response.data.list || []
       pagination.value.total = response.data.total || 0
 
       // 存入缓存

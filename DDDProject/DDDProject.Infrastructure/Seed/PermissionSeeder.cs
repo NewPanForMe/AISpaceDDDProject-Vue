@@ -101,7 +101,14 @@ public static class PermissionSeeder
             Permission.Create("cache:clear_menu", "清除菜单缓存", "Cache", "清除菜单缓存", null, 3),
             Permission.Create("cache:clear_list", "清除列表缓存", "Cache", "清除列表缓存", null, 4),
             Permission.Create("cache:clear_setting", "清除设置缓存", "Cache", "清除系统设置缓存", null, 5),
-            Permission.Create("cache:clear_all", "清除全部缓存", "Cache", "清除全部缓存", null, 6)
+            Permission.Create("cache:clear_all", "清除全部缓存", "Cache", "清除全部缓存", null, 6),
+
+            // 按钮管理权限
+            Permission.Create("button:add", "添加按钮", "Button", "添加新按钮", null, 1),
+            Permission.Create("button:edit", "编辑按钮", "Button", "编辑按钮信息", null, 2),
+            Permission.Create("button:delete", "删除按钮", "Button", "删除按钮", null, 3),
+            Permission.Create("button:enable", "启用按钮", "Button", "启用按钮", null, 4),
+            Permission.Create("button:disable", "禁用按钮", "Button", "禁用按钮", null, 5)
         };
 
         return permissions;

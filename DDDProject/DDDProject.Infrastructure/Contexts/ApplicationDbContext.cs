@@ -58,9 +58,15 @@ public class ApplicationDbContext : DbContext
     public DbSet<Permission> Permissions => Set<Permission>();
 
     /// <summary>
+    /// <summary>
     /// 角色权限关联集合
     /// </summary>
     public DbSet<RolePermission> RolePermissions => Set<RolePermission>();
+
+    /// <summary>
+    /// 按钮集合
+    /// </summary>
+    public DbSet<Button> Buttons => Set<Button>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -100,5 +106,8 @@ public class ApplicationDbContext : DbContext
 
         // 配置角色权限关联实体
         modelBuilder.ApplyConfiguration(new RolePermissionConfiguration());
+
+        // 配置按钮实体
+        modelBuilder.ApplyConfiguration(new ButtonConfiguration());
     }
 }

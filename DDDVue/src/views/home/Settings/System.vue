@@ -21,7 +21,7 @@
                 <span class="form-tip">分钟（1-1440）</span>
               </el-form-item>
               <el-form-item>
-                <el-button v-if="hasPermission(PermissionCodes.SETTING_SAVE_JWT)" type="primary" @click="saveJwtSettings">保存配置</el-button>
+                <el-button v-if="hasBtn('setting:save_jwt')" type="primary" @click="saveJwtSettings">保存配置</el-button>
               </el-form-item>
             </el-form>
           </div>
@@ -38,7 +38,7 @@
                 <el-input v-model="systemForm.systemDescription" type="textarea" :rows="3" placeholder="请输入系统描述" />
               </el-form-item>
               <el-form-item>
-                <el-button v-if="hasPermission(PermissionCodes.SETTING_SAVE_SYSTEM)" type="primary" @click="saveSystemSettings">保存配置</el-button>
+                <el-button v-if="hasBtn('setting:save_system')" type="primary" @click="saveSystemSettings">保存配置</el-button>
               </el-form-item>
             </el-form>
           </div>
@@ -58,9 +58,12 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { showSuccessNotification, showErrorNotification } from '@/utils/notification'
-import { hasPermission, PermissionCodes } from '@/utils/storage'
 import { getAllSettings, batchUpdateSettings } from '@/api/role'
 import type { SettingDto, UpdateSettingRequest } from '@/api/role'
+import { useButtons } from '@/utils/buttons'
+
+// 按钮管理
+const { hasBtn } = useButtons('settings-system')
 
 // 当前激活的标签页
 const activeTab = ref('jwt')

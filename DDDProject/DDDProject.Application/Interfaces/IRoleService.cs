@@ -64,6 +64,12 @@ public interface IRoleService : IApplicationService
     Task<ApiRequestResult> GetUserRoleIdsAsync(Guid userId);
 
     /// <summary>
+    /// 获取用户的角色详情列表
+    /// </summary>
+    /// <param name="userId">用户ID</param>
+    Task<ApiRequestResult> GetUserRolesAsync(Guid userId);
+
+    /// <summary>
     /// 配置用户角色
     /// </summary>
     /// <param name="userId">用户ID</param>
@@ -132,7 +138,9 @@ public interface IPermissionService : IApplicationService
     /// <summary>
     /// 获取权限列表（分页）
     /// </summary>
-    Task<ApiRequestResult> GetPermissionsAsync(PagedRequest request);
+    /// <param name="request">分页请求</param>
+    /// <param name="module">模块名称（可选，用于筛选）</param>
+    Task<ApiRequestResult> GetPermissionsAsync(PagedRequest request, string? module = null);
 
     /// <summary>
     /// 获取所有启用的权限列表

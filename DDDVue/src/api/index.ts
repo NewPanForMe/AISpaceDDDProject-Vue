@@ -240,6 +240,7 @@ export interface ApiConfig {
     EnableRoleAsync: string;
     DisableRoleAsync: string;
     GetUserRoleIdsAsync: string;
+    GetUserRolesAsync: string;
     AssignUserRolesAsync: string;
     GetEnabledRolesAsync: string;
     GetRoleUserIdsAsync: string;
@@ -276,6 +277,16 @@ export interface ApiConfig {
     AssignRolePermissionsAsync: string;
     GetUserPermissionsAsync: string;
     HasPermissionAsync: string;
+  };
+  Button: {
+    GetButtonsAsync: string;
+    GetButtonByIdAsync: string;
+    GetButtonsByMenuIdAsync: string;
+    CreateButtonAsync: string;
+    UpdateButtonAsync: string;
+    DeleteButtonAsync: string;
+    EnableButtonAsync: string;
+    DisableButtonAsync: string;
   };
 }
 
@@ -321,6 +332,7 @@ const api: ApiConfig = {
     EnableRoleAsync: 'api/Role/EnableRoleAsync',
     DisableRoleAsync: 'api/Role/DisableRoleAsync',
     GetUserRoleIdsAsync: 'api/Role/GetUserRoleIdsAsync',
+    GetUserRolesAsync: 'api/Role/GetUserRolesAsync',
     AssignUserRolesAsync: 'api/Role/AssignUserRolesAsync',
     GetEnabledRolesAsync: 'api/Role/GetEnabledRolesAsync',
     GetRoleUserIdsAsync: 'api/Role/GetRoleUserIdsAsync',
@@ -357,6 +369,16 @@ const api: ApiConfig = {
     AssignRolePermissionsAsync: 'api/Permission/AssignRolePermissionsAsync',
     GetUserPermissionsAsync: 'api/Permission/GetUserPermissionsAsync',
     HasPermissionAsync: 'api/Permission/HasPermissionAsync',
+  },
+  Button: {
+    GetButtonsAsync: 'api/Button/GetButtonsAsync',
+    GetButtonByIdAsync: 'api/Button/GetButtonByIdAsync',
+    GetButtonsByMenuIdAsync: 'api/Button/GetButtonsByMenuIdAsync',
+    CreateButtonAsync: 'api/Button/CreateButtonAsync',
+    UpdateButtonAsync: 'api/Button/UpdateButtonAsync',
+    DeleteButtonAsync: 'api/Button/DeleteButtonAsync',
+    EnableButtonAsync: 'api/Button/EnableButtonAsync',
+    DisableButtonAsync: 'api/Button/DisableButtonAsync',
   },
 };
 

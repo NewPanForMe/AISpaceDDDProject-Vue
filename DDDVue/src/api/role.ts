@@ -55,6 +55,11 @@ export const getUserRoleIds = (userId: string) => {
   return http.get<string[]>(api.Role.GetUserRoleIdsAsync, { params: { userId } })
 }
 
+// 获取用户的角色详情列表
+export const getUserRoles = (userId: string) => {
+  return http.get<RoleDto[]>(api.Role.GetUserRolesAsync, { params: { userId } })
+}
+
 // 配置用户角色
 export const assignUserRoles = (data: AssignUserRolesRequest) => {
   return http.post(api.Role.AssignUserRolesAsync, data)

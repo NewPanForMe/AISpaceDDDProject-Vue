@@ -52,19 +52,14 @@ const saveMenuToStorage = (menuList: MenuItem[]) => {
 
 // 获取菜单树并转换为侧边栏菜单格式
 const loadMenuTree = async () => {
-  // 优先从 localStorage 获取
-  const cachedMenu = getMenuFromStorage()
-  if (cachedMenu) {
-    menuList.value = cachedMenu
-    isMenuLoaded.value = true
-    return
-  }
-
+  // 每次都从后端获取菜单，确保根据用户角色正确显示
+  // 不使用缓存，避免不同用户登录后显示错误的菜单
   try {
     const response = await menuApi.getSidebarMenuTree()
     if (response.data && Array.isArray(response.data)) {
       // 后端已返回树形结构，无需再次转换
       menuList.value = response.data
+      // 保存到缓存（用于路由初始化）
       saveMenuToStorage(response.data)
       isMenuLoaded.value = true
     }

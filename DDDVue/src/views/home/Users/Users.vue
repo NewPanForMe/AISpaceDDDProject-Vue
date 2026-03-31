@@ -4,7 +4,7 @@
       <el-card class="users-card">
         <template #header>
           <div class="card-header">
-            <el-button v-if="hasPermission(PermissionCodes.USER_ADD)" class="button" type="primary" @click="addUser">添加用户</el-button>
+            <el-button v-if="hasBtn('user:add')" class="button" type="primary" @click="addUser">添加用户</el-button>
           </div>
         </template>
         <el-table :data="userList" style="width: 100%" :header-cell-style="{ background: '#f5f7fa', color: '#333' }"
@@ -41,13 +41,13 @@
           <el-table-column label="操作" width="400" fixed="right">
             <template #default="{ row }">
               <div class="table-actions">
-                <el-button v-if="hasPermission(PermissionCodes.USER_EDIT)" size="small" @click="editUser(row)">编辑</el-button>
-                <el-button v-if="hasPermission(PermissionCodes.USER_RESET_PASSWORD)" size="small" type="info" @click="openResetPwdDialog(row)">重置密码</el-button>
-                <el-button v-if="hasPermission(PermissionCodes.USER_ASSIGN_ROLE)" size="small" type="primary" @click="configRole(row)">配置角色</el-button>
-                <el-button v-if="hasAnyPermission([PermissionCodes.USER_ENABLE, PermissionCodes.USER_DISABLE])" size="small" :type="row.status === 1 ? 'warning' : 'success'" @click="toggleUserStatus(row)">
+                <el-button v-if="hasBtn('user:edit')" size="small" @click="editUser(row)">编辑</el-button>
+                <el-button v-if="hasBtn('user:reset_password')" size="small" type="info" @click="openResetPwdDialog(row)">重置密码</el-button>
+                <el-button v-if="hasBtn('user:assign_role')" size="small" type="primary" @click="configRole(row)">配置角色</el-button>
+                <el-button v-if="hasAnyBtn(['user:enable', 'user:disable'])" size="small" :type="row.status === 1 ? 'warning' : 'success'" @click="toggleUserStatus(row)">
                   {{ row.status === 1 ? '禁用' : '启用' }}
                 </el-button>
-                <el-button v-if="hasPermission(PermissionCodes.USER_DELETE)" size="small" type="danger" @click="deleteUser(row)">删除</el-button>
+                <el-button v-if="hasBtn('user:delete')" size="small" type="danger" @click="deleteUser(row)">删除</el-button>
               </div>
             </template>
           </el-table-column>
@@ -149,11 +149,15 @@ import * as roleApi from '@/api/role'
 import type { UserDto, CreateUserRequest, UpdateUserRequest, RoleDto } from '@/api/index'
 import { aesEncrypt } from '@/utils/crypto'
 import { showSuccessNotification, showErrorNotification } from '@/utils/notification'
-import { getItem, setItem, StorageKeys, hasPermission, hasAnyPermission, PermissionCodes } from '@/utils/storage'
+import { getItem, setItem, StorageKeys } from '@/utils/storage'
+import { useButtons } from '@/utils/buttons'
 
 // 解构导入 API 函数
 const { getUsers, createUser: createUserApi, updateUser: updateUserApi, deleteUser: deleteUserApi, enableUser, disableUser, resetPassword } = userApi
 const { getUserRoleIds, assignUserRoles, getEnabledRoles } = roleApi
+
+// 按钮管理
+const { hasBtn, hasAnyBtn } = useButtons('users')
 
 // 用户表单类型
 interface UserForm {

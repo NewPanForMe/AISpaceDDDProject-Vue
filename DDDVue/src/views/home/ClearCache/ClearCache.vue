@@ -31,7 +31,7 @@
               </el-tag>
             </div>
             <el-button
-              v-if="hasPermission(category.permission)"
+              v-if="hasBtn(category.permission)"
               type="primary"
               :icon="Delete"
               circle
@@ -50,7 +50,7 @@
         </el-divider>
         <div class="action-buttons">
           <el-button
-            v-if="hasPermission(PermissionCodes.CACHE_CLEAR_AUTH)"
+            v-if="hasBtn('cache:clear_auth')"
             type="warning"
             :icon="Key"
             @click="confirmClear('Auth')"
@@ -58,7 +58,7 @@
             清除登录认证
           </el-button>
           <el-button
-            v-if="hasPermission(PermissionCodes.CACHE_CLEAR_USER)"
+            v-if="hasBtn('cache:clear_user')"
             type="primary"
             :icon="User"
             @click="confirmClear('User')"
@@ -66,7 +66,7 @@
             清除用户信息
           </el-button>
           <el-button
-            v-if="hasPermission(PermissionCodes.CACHE_CLEAR_MENU)"
+            v-if="hasBtn('cache:clear_menu')"
             type="success"
             :icon="Menu"
             @click="confirmClear('Menu')"
@@ -74,7 +74,7 @@
             清除菜单缓存
           </el-button>
           <el-button
-            v-if="hasPermission(PermissionCodes.CACHE_CLEAR_LIST)"
+            v-if="hasBtn('cache:clear_list')"
             type="info"
             :icon="DataLine"
             @click="confirmClear('List')"
@@ -82,14 +82,14 @@
             清除列表缓存
           </el-button>
           <el-button
-            v-if="hasPermission(PermissionCodes.CACHE_CLEAR_SETTING)"
+            v-if="hasBtn('cache:clear_setting')"
             :icon="Setting"
             @click="confirmClear('Setting')"
           >
             清除设置缓存
           </el-button>
           <el-button
-            v-if="hasPermission(PermissionCodes.CACHE_CLEAR_ALL)"
+            v-if="hasBtn('cache:clear_all')"
             type="danger"
             :icon="Delete"
             @click="confirmClearAll"
@@ -133,7 +133,7 @@
           <el-table-column label="操作" width="100" align="center">
             <template #default="{ row }">
               <el-button
-                v-if="hasPermission(row.permission)"
+                v-if="hasBtn(row.permission)"
                 type="danger"
                 :icon="Delete"
                 size="small"
@@ -163,11 +163,13 @@ import {
   getCategoryDetails,
   getTotalCacheCount,
   getKeysByCategory,
-  hasPermission,
-  PermissionCodes,
   type StorageCategory
 } from '@/utils/storage'
 import { showSuccessNotification } from '@/utils/notification'
+import { useButtons } from '@/utils/buttons'
+
+// 按钮管理
+const { hasBtn } = useButtons('settings-system')
 
 const router = useRouter()
 

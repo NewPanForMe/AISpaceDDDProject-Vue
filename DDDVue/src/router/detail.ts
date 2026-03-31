@@ -1,22 +1,16 @@
 import { ref } from 'vue'
 import * as menuApi from '@/api/menu'
 import type { RouteConfig } from '@/api/menu'
-import Login from '../views/Login.vue'
-import Error from '../views/Error/404.vue'
-import Layout from '../views/layout/Layout.vue'
-import ClearCache from '../views/home/ClearCache/ClearCache.vue'
 import { getItem, setItem, StorageKeys } from '@/utils/storage'
 
 // 路由数据
 const routes = ref<RouteConfig[]>([])
 const isLoading = ref(true)
 
-// 组件映射表 - 将组件名称映射到实际组件
-const componentMap: Record<string, any> = {
-    'Login': Login,
-    'Error': Error,
-    'Layout': Layout,
-    'ClearCache': ClearCache
+// 简单的 404 组件（避免循环依赖）
+const ErrorComponent = {
+    name: 'Error404',
+    template: '<div style="padding: 40px; text-align: center;"><h1>404</h1><p>页面不存在</p></div>'
 }
 
 // 使用 import.meta.glob 预加载所有 views/home 下的组件
@@ -144,15 +138,11 @@ export const convertToRouterFormat = (routeConfigs: RouteConfig[]): any[] => {
             } else {
                 // 目录/文件格式或简单组件名，直接从预加载组件中查找
                 component = componentPathMap[componentPath] || null
-
-                if (!component) {
-                    component = componentMap[componentPath] || null
-                }
             }
 
             if (!component) {
                 console.warn(`未找到组件 "${componentPath}"，使用 404 错误页面`)
-                component = Error
+                component = ErrorComponent
             }
 
             result.push({
