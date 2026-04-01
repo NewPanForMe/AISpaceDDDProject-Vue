@@ -1008,6 +1008,49 @@ public class SettingService : ISettingService
             };
         }
     }
+
+    /// <summary>
+    /// 获取公开的系统设置（无需登录）
+    /// </summary>
+    /// <remarks>
+    /// 返回系统名称、系统描述等公开配置，用于登录页等无需认证的场景
+    /// </remarks>
+    public async Task<ApiRequestResult> GetPublicSettingsAsync()
+    {
+        try
+        {
+            // 定义公开的设置键名
+            var publicKeys = new[] { "SystemName", "SystemDescription" };
+
+            var settings = await _settingRepository.GetListAsync(s => publicKeys.Contains(s.Key));
+            var dtos = settings.Select(s => new SettingDto
+            {
+                Id = s.Id,
+                Key = s.Key,
+                Value = s.Value,
+                Description = s.Description,
+                Group = s.Group,
+                CreatedAt = s.CreatedAt,
+                UpdatedAt = s.UpdatedAt
+            }).ToList();
+
+            return new ApiRequestResult
+            {
+                Success = true,
+                Message = "操作成功",
+                Data = dtos
+            };
+        }
+        catch (Exception ex)
+        {
+            return new ApiRequestResult
+            {
+                Success = false,
+                Message = $"获取公开设置失败: {ex.Message}",
+                Data = null
+            };
+        }
+    }
 }
 
 /// <summary>

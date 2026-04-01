@@ -32,7 +32,7 @@
               </el-tag>
             </template>
           </el-table-column>
-          <el-table-column label="操作" width="200" fixed="right">
+          <el-table-column label="操作" width="240" fixed="right">
             <template #default="{ row }">
               <div class="table-actions">
                 <el-button v-if="hasBtn('menu:edit')" size="small" @click="editMenu(row)">编辑</el-button>
@@ -364,6 +364,7 @@ onMounted(() => {
   gap: 8px;
   align-items: center;
   flex-wrap: nowrap;
+  padding: 0 8px;
 }
 
 .dialog-footer {

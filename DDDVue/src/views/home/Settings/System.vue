@@ -56,14 +56,19 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, inject } from 'vue'
+import type { Ref } from 'vue'
 import { showSuccessNotification, showErrorNotification } from '@/utils/notification'
 import { getAllSettings, batchUpdateSettings } from '@/api/role'
 import type { SettingDto, UpdateSettingRequest } from '@/api/role'
 import { useButtons } from '@/utils/buttons'
+import { setSystemName, getItem, setItem, StorageKeys } from '@/utils/storage'
 
 // 按钮管理
 const { hasBtn } = useButtons('settings-system')
+
+// 从 Layout.vue 注入的系统名称响应式变量
+const systemName = inject<Ref<string>>('systemName')
 
 // 当前激活的标签页
 const activeTab = ref('jwt')
@@ -99,11 +104,23 @@ const SETTING_KEYS = {
 const loadSettings = async () => {
   loading.value = true
   try {
+    // 优先从缓存获取系统配置
+    const cachedSystemName = getItem<string>(StorageKeys.SystemName)
+    const cachedSystemDescription = getItem<string>(StorageKeys.SystemDescription)
+
+    if (cachedSystemName) {
+      systemForm.value.systemName = cachedSystemName
+    }
+    if (cachedSystemDescription) {
+      systemForm.value.systemDescription = cachedSystemDescription
+    }
+
+    // 从 API 获取所有设置（包括 JWT 配置和未缓存的系统配置）
     const response = await getAllSettings()
     if (response.success && response.data) {
       const settings = response.data as SettingDto[]
       settings.forEach(setting => {
-        // JWT 配置
+        // JWT 配置（不缓存）
         if (setting.key === SETTING_KEYS.JWT_ISSUER) {
           jwtForm.value.issuer = setting.value
         } else if (setting.key === SETTING_KEYS.JWT_AUDIENCE) {
@@ -113,11 +130,17 @@ const loadSettings = async () => {
         } else if (setting.key === SETTING_KEYS.JWT_EXPIRE_MINUTES) {
           jwtForm.value.expireMinutes = parseInt(setting.value) || 720
         }
-        // 系统配置
+        // 系统配置（缓存不存在时从 API 获取并缓存）
         else if (setting.key === SETTING_KEYS.SYSTEM_NAME) {
-          systemForm.value.systemName = setting.value
+          if (!cachedSystemName && setting.value) {
+            systemForm.value.systemName = setting.value
+            setItem(StorageKeys.SystemName, setting.value)
+          }
         } else if (setting.key === SETTING_KEYS.SYSTEM_DESCRIPTION) {
-          systemForm.value.systemDescription = setting.value
+          if (!cachedSystemDescription && setting.value) {
+            systemForm.value.systemDescription = setting.value
+            setItem(StorageKeys.SystemDescription, setting.value)
+          }
         }
       })
     }
@@ -166,6 +189,17 @@ const saveSystemSettings = async () => {
 
     const response = await batchUpdateSettings({ settings })
     if (response.success) {
+      // 将系统配置存储到 localStorage 缓存（归类到 Setting 分类）
+      if (systemForm.value.systemName) {
+        setSystemName(systemForm.value.systemName)
+        // 实时更新 Layout.vue 中的系统名称显示
+        if (systemName) {
+          systemName.value = systemForm.value.systemName
+        }
+      }
+      if (systemForm.value.systemDescription) {
+        setItem(StorageKeys.SystemDescription, systemForm.value.systemDescription)
+      }
       showSuccessNotification({ title: '成功', message: '系统配置保存成功' })
       await loadSettings()  // 刷新数据
     } else {

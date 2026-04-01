@@ -149,7 +149,7 @@ import * as roleApi from '@/api/role'
 import type { UserDto, CreateUserRequest, UpdateUserRequest, RoleDto } from '@/api/index'
 import { aesEncrypt } from '@/utils/crypto'
 import { showSuccessNotification, showErrorNotification } from '@/utils/notification'
-import { getItem, setItem, StorageKeys } from '@/utils/storage'
+import { getItem, setItem, removeItem, StorageKeys, clearUserPermissions } from '@/utils/storage'
 import { useButtons } from '@/utils/buttons'
 
 // 解构导入 API 函数
@@ -541,6 +541,13 @@ const submitRoleForm = async () => {
 
     showSuccessNotification({ title: '成功', message: '角色配置成功' })
     roleDialogVisible.value = false
+
+    // 清除权限缓存，因为用户角色变化可能导致权限变化
+    clearUserPermissions()
+
+    // 清除按钮权限缓存（如果存在）
+    removeItem('button_permissions')
+
     await loadUserData()  // 刷新数据
   } catch (error) {
     console.error('配置角色失败:', error)

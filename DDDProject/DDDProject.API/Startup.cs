@@ -1,11 +1,14 @@
 using DDDProject.Domain.Models;
 using DDDProject.API.Extensions;
 using DDDProject.API.Middlewares;
+using DDDProject.API.Attributes;
+using DDDProject.Application.Common;
 using DDDProject.Application.Interfaces;
 using DDDProject.Infrastructure;
 using DDDProject.Infrastructure.Contexts;
 using DDDProject.Infrastructure.Seed;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Scalar.AspNetCore;
@@ -95,6 +98,15 @@ namespace DDDProject.API
             services.AddHttpContextAccessor();
             services.AddScoped<CurrentUser>();
             services.AddScoped<ICurrentUserContext>(sp => sp.GetRequiredService<CurrentUser>());
+
+            // 添加授权服务
+            services.AddAuthorization();
+
+            // 注册自定义权限策略提供者（必须在 AddAuthorization 之后）
+            services.AddSingleton<IAuthorizationPolicyProvider, PermissionPolicyProvider>();
+
+            // 注册 PermissionHandler 作为授权处理程序
+            services.AddScoped<IAuthorizationHandler, PermissionHandler>();
         }
 
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env, ILogger<Program> logger)
@@ -118,12 +130,17 @@ namespace DDDProject.API
                     context.SeedMenus();
                     context.SeedPermissions();
                     context.SeedSettings();
-                    context.SeedButtons();
 
-                    // 2. 关联数据
+                    // 2. 测试权限数据（用于 PermissionTestController）
+                    context.SeedTestPermissions();
+
+                    // 3. 关联数据
                     context.SeedUserRoles();
                     context.SeedMenuRoles();
                     context.SeedRolePermissions();
+
+                    // 4. 测试权限角色关联（将测试权限分配给管理员角色）
+                    context.SeedTestRolePermissions();
 
                     logger.LogInformation("数据库初始化完成，所有种子数据已同步。");
                 }

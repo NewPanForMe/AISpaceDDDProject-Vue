@@ -106,6 +106,11 @@ export interface BatchUpdateSettingsRequest {
   settings: UpdateSettingRequest[]
 }
 
+// 获取公开的系统设置（无需登录）
+export const getPublicSettings = () => {
+  return http.get<SettingDto[]>(api.Login.GetPublicSettingsAsync)
+}
+
 // 获取所有设置
 export const getAllSettings = () => {
   return http.get<SettingDto[]>(api.Setting.GetAllSettingsAsync)
@@ -227,15 +232,13 @@ export const getUserPermissions = (userId: string) => {
 }
 
 // 获取用户的权限编码列表
-export const getUserPermissionCodes = async (userId: string) => {
+export const getUserPermissionCodes = async (userId: string): Promise<string[]> => {
   const response = await http.get<PermissionDto[]>(api.Permission.GetUserPermissionsAsync, { params: { userId } })
-  if (response.success && response.data) {
-    return {
-      ...response,
-      data: response.data.map(p => p.code)
-    }
+  // 注意：响应拦截器返回的是 response.data
+  if (Array.isArray(response)) {
+    return response.map(p => p.code)
   }
-  return response
+  return []
 }
 
 // 检查用户是否有指定权限

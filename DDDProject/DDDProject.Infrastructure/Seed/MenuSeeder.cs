@@ -160,17 +160,6 @@ public static class MenuSeeder
         );
         menus.Add(systemMenu);
 
-        var buttonMenu = Menu.Create(
-            name: "按钮管理",
-            path: "settings-button",
-            component: "Settings/Button",
-            icon: "Lock",
-            parentId: settingsMenu.Id,
-            sortOrder: 2,
-            status: 1
-        );
-        menus.Add(buttonMenu);
-
 
 
 

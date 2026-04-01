@@ -15,6 +15,16 @@
   </thead>
   <tbody>
     <tr>
+      <td rowspan="7">2026-04-01</td>
+      <td>新增自定义权限注解 <code>[Permission]</code>，支持方法级别的权限控制</td>
+    </tr>
+    <tr>
+      <td>为所有控制器的数据变更方法添加 <code>[Permission]</code> 注解</td>
+    </tr>
+    <tr>
+      <td>将权限注解规范记录到 README.md 开发守则</td>
+    </tr>
+    <tr>
       <td rowspan="6">2026-03-31</td>
       <td>新增按钮管理模块（Button），支持页面按钮的统一管理</td>
     </tr>
@@ -85,6 +95,7 @@
 - [开发规范](#开发规范)
   - [通用编码规范](#51-通用编码规范)
   - [后端开发规范](#52-后端开发规范)
+  - [权限注解规范](#524-权限注解规范)
   - [前端开发规范](#53-前端开发规范)
   - [安全规范](#54-安全规范)
   - [配置规范](#55-配置规范)
@@ -550,7 +561,105 @@ public class YourController : BaseApiController
 4. 使用 `async/await` 并返回 `Task<IActionResult>`
 5. 添加 `[ApiSearch]` 标签用于接口发现
 
-#### 5.2.4 Repository 层规范
+#### 5.2.4 权限注解规范
+
+**所有涉及数据变更的 API 方法必须使用 `[Permission]` 注解进行权限控制。**
+
+**基本用法：**
+
+```csharp
+// 单个权限验证
+[Permission("user:add")]
+public async Task<ApiRequestResult> CreateUserAsync([FromBody] CreateUserRequest request)
+
+// 多个权限验证（满足任一）
+[Permission(new[] { "user:edit", "user:admin" }, PermissionLogic.Any)]
+public async Task<ApiRequestResult> UpdateUserAsync([FromBody] UpdateUserRequest request)
+
+// 多个权限验证（满足所有）
+[Permission(new[] { "user:delete", "user:admin" }, PermissionLogic.All)]
+public async Task<ApiRequestResult> DeleteUserAsync([FromQuery] Guid id)
+```
+
+**权限编码命名规范：**
+
+权限编码格式为 `模块:操作`，必须全小写，使用冒号分隔：
+
+| 模块 | 操作类型 | 示例 |
+|------|----------|------|
+| 用户管理 | add, edit, delete, enable, disable, reset_password | `user:add`, `user:edit` |
+| 角色管理 | add, edit, delete, enable, disable, assign_user, assign_menu | `role:add`, `role:assign_user` |
+| 菜单管理 | add, edit, delete, enable, disable | `menu:add`, `menu:edit` |
+| 按钮管理 | add, edit, delete, enable, disable | `button:add`, `button:edit` |
+
+**必须添加权限注解的方法：**
+
+- 创建（Create）
+- 更新（Update）
+- 删除（Delete）
+- 启用/禁用（Enable/Disable）
+- 分配/配置（Assign）
+
+**不需要添加权限注解的方法：**
+
+- 查询列表（GetList）
+- 查询详情（GetById）
+- 获取下拉选项（GetEnabledItems）
+
+**示例：**
+
+```csharp
+[ApiController]
+[Route("api/[controller]/[action]")]
+[Authorize]
+public class UserController : BaseApiController
+{
+    // ✅ 查询方法不需要权限注解
+    [HttpGet]
+    [ActionName("GetUsersAsync")]
+    public async Task<ApiRequestResult> GetUsersAsync([FromQuery] PagedRequest request)
+    {
+        return await _userService.GetUsersAsync(request);
+    }
+
+    // ✅ 数据变更方法必须添加权限注解
+    [HttpPost]
+    [ActionName("CreateUserAsync")]
+    [Permission("user:add")]
+    public async Task<ApiRequestResult> CreateUserAsync([FromBody] CreateUserRequest request)
+    {
+        return await _userService.CreateUserAsync(request);
+    }
+
+    // ✅ 更新操作
+    [HttpPut]
+    [ActionName("UpdateUserAsync")]
+    [Permission("user:edit")]
+    public async Task<ApiRequestResult> UpdateUserAsync([FromBody] UpdateUserRequest request)
+    {
+        return await _userService.UpdateUserAsync(request);
+    }
+
+    // ✅ 删除操作
+    [HttpDelete]
+    [ActionName("DeleteUserAsync")]
+    [Permission("user:delete")]
+    public async Task<IActionResult> DeleteUserAsync([FromQuery] Guid id)
+    {
+        return await _userService.DeleteUserAsync(id);
+    }
+}
+```
+
+**注意事项：**
+
+1. `[Permission]` 特性继承自 `[Authorize]`，所以不需要同时使用两者
+2. 权限验证失败会返回 403 Forbidden 状态码
+3. 如果用户未登录，会先触发身份验证失败（401 Unauthorized）
+4. 权限编码应与数据库中 Permissions 表的 Code 字段保持一致
+5. 新增权限需要在 `PermissionSeeder.cs` 中添加种子数据
+
+#### 5.2.5 Repository 层规范
 
 **双泛型仓储（Repository<TEntity, TId>）**：针对各种主键类型的通用实体仓储实现
 

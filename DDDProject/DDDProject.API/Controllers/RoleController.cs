@@ -57,6 +57,7 @@ public class RoleController : BaseApiController
     /// </summary>
     [HttpPost]
     [ActionName("CreateRoleAsync")]
+    [Permission("role:add")]
     [ApiSearch(Name = "创建角色", Description = "创建新的角色", Category = ApiSearchCategory.Role)]
     public async Task<ApiRequestResult> CreateRoleAsync([FromBody] CreateRoleRequest request)
     {
@@ -68,6 +69,7 @@ public class RoleController : BaseApiController
     /// </summary>
     [HttpPut]
     [ActionName("UpdateRoleAsync")]
+    [Permission("role:edit")]
     [ApiSearch(Name = "更新角色", Description = "更新现有角色", Category = ApiSearchCategory.Role)]
     public async Task<ApiRequestResult> UpdateRoleAsync([FromBody] UpdateRoleRequest request)
     {
@@ -79,6 +81,7 @@ public class RoleController : BaseApiController
     /// </summary>
     [HttpDelete]
     [ActionName("DeleteRoleAsync")]
+    [Permission("role:delete")]
     [ApiSearch(Name = "删除角色", Description = "根据ID删除角色", Category = ApiSearchCategory.Role)]
     public async Task<IActionResult> DeleteRoleAsync([FromQuery] Guid id)
     {
@@ -93,6 +96,7 @@ public class RoleController : BaseApiController
     /// </summary>
     [HttpPost]
     [ActionName("EnableRoleAsync")]
+    [Permission("role:enable")]
     [ApiSearch(Name = "启用角色", Description = "启用一个被禁用的角色", Category = ApiSearchCategory.Role)]
     public async Task<ApiRequestResult> EnableRoleAsync([FromQuery] Guid id)
     {
@@ -104,6 +108,7 @@ public class RoleController : BaseApiController
     /// </summary>
     [HttpPost]
     [ActionName("DisableRoleAsync")]
+    [Permission("role:disable")]
     [ApiSearch(Name = "禁用角色", Description = "禁用一个启用的角色", Category = ApiSearchCategory.Role)]
     public async Task<ApiRequestResult> DisableRoleAsync([FromQuery] Guid id)
     {
@@ -137,6 +142,7 @@ public class RoleController : BaseApiController
     /// </summary>
     [HttpPost]
     [ActionName("AssignUserRolesAsync")]
+    [Permission("role:assign_user")]
     [ApiSearch(Name = "配置用户角色", Description = "为指定用户分配角色", Category = ApiSearchCategory.Role)]
     public async Task<ApiRequestResult> AssignUserRolesAsync([FromBody] AssignUserRolesRequest request)
     {
@@ -170,6 +176,7 @@ public class RoleController : BaseApiController
     /// </summary>
     [HttpPost]
     [ActionName("AssignRoleUsersAsync")]
+    [Permission("role:assign_user")]
     [ApiSearch(Name = "配置角色用户", Description = "为指定角色分配用户", Category = ApiSearchCategory.Role)]
     public async Task<ApiRequestResult> AssignRoleUsersAsync([FromBody] AssignRoleUsersRequest request)
     {

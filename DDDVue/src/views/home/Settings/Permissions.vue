@@ -89,10 +89,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted } from 'vue'
 import { ElMessageBox } from 'element-plus'
 import * as permissionApi from '@/api/role'
 import type { PermissionDto, CreatePermissionRequest, UpdatePermissionRequest } from '@/api/role'
+import type { PageParams } from '@/api/role'
 import { showSuccessNotification, showErrorNotification } from '@/utils/notification'
 import { getItem, setItem, StorageKeys } from '@/utils/storage'
 import { useButtons } from '@/utils/buttons'
@@ -108,7 +109,7 @@ const {
 } = permissionApi
 
 // 按钮管理
-const { hasBtn, hasAnyBtn } = useButtons('settings-permissions')
+const { hasBtn } = useButtons('settings-permissions')
 
 // 权限表单类型
 interface PermissionForm {

@@ -24,8 +24,10 @@ export const StorageKeys = {
   // 列表数据缓存
   List: 'list',
 
-  // 设置相关
+  // 设置相关（系统配置缓存，以 'settings' 开头，归类到 Setting 分类）
   Setting: 'settings',
+  SystemName: 'settings_systemName',
+  SystemDescription: 'settings_systemDescription',
 } as const
 
 // 用户信息类型（与后端 UserDto 对应）
@@ -419,4 +421,30 @@ export const usePermission = () => {
     clearUserPermissions,
     PermissionCodes
   }
+}
+
+// ==================== 系统名称相关函数 ====================
+
+/**
+ * 获取系统名称
+ * @returns 系统名称，默认为 "智能管理系统"
+ */
+export const getSystemName = (): string => {
+  const systemName = getItem<string>(StorageKeys.SystemName)
+  return systemName || '智能管理系统'
+}
+
+/**
+ * 设置系统名称
+ * @param name 系统名称
+ */
+export const setSystemName = (name: string): void => {
+  setItem(StorageKeys.SystemName, name)
+}
+
+/**
+ * 清除系统名称
+ */
+export const clearSystemName = (): void => {
+  removeItem(StorageKeys.SystemName)
 }

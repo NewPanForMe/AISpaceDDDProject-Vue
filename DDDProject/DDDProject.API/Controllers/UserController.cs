@@ -57,6 +57,7 @@ public class UserController : BaseApiController
     /// </summary>
     [HttpPost]
     [ActionName("CreateUserAsync")]
+    [Permission("user:add")]
     [ApiSearch(Name = "创建用户", Description = "创建新的用户", Category = ApiSearchCategory.User)]
     public async Task<ApiRequestResult> CreateUserAsync([FromBody] CreateUserRequest request)
     {
@@ -68,6 +69,7 @@ public class UserController : BaseApiController
     /// </summary>
     [HttpPut]
     [ActionName("UpdateUserAsync")]
+    [Permission("user:edit")]
     [ApiSearch(Name = "更新用户", Description = "更新现有用户", Category = ApiSearchCategory.User)]
     public async Task<ApiRequestResult> UpdateUserAsync([FromBody] UpdateUserRequest request)
     {
@@ -79,6 +81,7 @@ public class UserController : BaseApiController
     /// </summary>
     [HttpDelete]
     [ActionName("DeleteUserAsync")]
+    [Permission("user:delete")]
     [ApiSearch(Name = "删除用户", Description = "根据ID删除用户", Category = ApiSearchCategory.User)]
     public async Task<IActionResult> DeleteUserAsync([FromQuery] Guid id)
     {
@@ -93,6 +96,7 @@ public class UserController : BaseApiController
     /// </summary>
     [HttpPost]
     [ActionName("EnableUserAsync")]
+    [Permission("user:enable")]
     [ApiSearch(Name = "启用用户", Description = "启用一个被禁用的用户", Category = ApiSearchCategory.User)]
     public async Task<ApiRequestResult> EnableUserAsync([FromQuery] Guid id)
     {
@@ -104,6 +108,7 @@ public class UserController : BaseApiController
     /// </summary>
     [HttpPost]
     [ActionName("DisableUserAsync")]
+    [Permission("user:disable")]
     [ApiSearch(Name = "禁用用户", Description = "禁用一个启用的用户", Category = ApiSearchCategory.User)]
     public async Task<ApiRequestResult> DisableUserAsync([FromQuery] Guid id)
     {
@@ -115,6 +120,7 @@ public class UserController : BaseApiController
     /// </summary>
     [HttpPost]
     [ActionName("ResetPasswordAsync")]
+    [Permission("user:reset_password")]
     [ApiSearch(Name = "重置用户密码", Description = "重置用户的密码", Category = ApiSearchCategory.User)]
     public async Task<ApiRequestResult> ResetPasswordAsync([FromBody] ResetPasswordRequest request)
     {

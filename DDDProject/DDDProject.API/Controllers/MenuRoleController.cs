@@ -52,6 +52,7 @@ public class MenuRoleController : BaseApiController
     /// </summary>
     [HttpPost]
     [ActionName("AssignRoleMenusAsync")]
+    [Permission("role:assign_menu")]
     [ApiSearch(Name = "分配角色菜单", Description = "为指定角色分配菜单权限", Category = ApiSearchCategory.Role)]
     public async Task<ApiRequestResult> AssignRoleMenusAsync([FromBody] AssignRoleMenusRequest request)
     {
@@ -63,6 +64,7 @@ public class MenuRoleController : BaseApiController
     /// </summary>
     [HttpPost]
     [ActionName("AssignMenuRolesAsync")]
+    [Permission("role:assign_menu")]
     [ApiSearch(Name = "分配菜单角色", Description = "为指定菜单分配角色", Category = ApiSearchCategory.Menu)]
     public async Task<ApiRequestResult> AssignMenuRolesAsync([FromBody] AssignMenuRolesRequest request)
     {
@@ -96,6 +98,7 @@ public class MenuRoleController : BaseApiController
     /// </summary>
     [HttpDelete]
     [ActionName("ClearRoleMenusAsync")]
+    [Permission("role:assign_menu")]
     [ApiSearch(Name = "清除角色菜单", Description = "清除指定角色的所有菜单权限", Category = ApiSearchCategory.Role)]
     public async Task<ApiRequestResult> ClearRoleMenusAsync([FromQuery] Guid roleId)
     {
@@ -107,6 +110,7 @@ public class MenuRoleController : BaseApiController
     /// </summary>
     [HttpDelete]
     [ActionName("ClearMenuRolesAsync")]
+    [Permission("role:assign_menu")]
     [ApiSearch(Name = "清除菜单角色", Description = "清除指定菜单的所有角色关联", Category = ApiSearchCategory.Menu)]
     public async Task<ApiRequestResult> ClearMenuRolesAsync([FromQuery] Guid menuId)
     {

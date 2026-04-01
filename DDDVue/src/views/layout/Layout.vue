@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import { ref, watch, onMounted, onUnmounted, markRaw } from 'vue'
+import { ref, watch, onMounted, onUnmounted, markRaw, provide } from 'vue'
 import { RouterLink, useRouter } from 'vue-router'
 import { User, Fold, Expand, Collection, Menu, Setting } from '@element-plus/icons-vue'
 import * as menuApi from '@/api/menu'
 import * as Icons from '@element-plus/icons-vue'
-import { getItem, setItem, clearAllCache, StorageKeys } from '@/utils/storage'
+import { getItem, setItem, clearAllCache, StorageKeys, getSystemName } from '@/utils/storage'
 import { showSuccessNotification, showErrorNotification } from '@/utils/notification'
 
 // 菜单数据
@@ -30,6 +30,10 @@ const isMobile = ref(false)
 const isMobileMenuVisible = ref(false)
 const userInfo = ref<UserInfo>({})
 const isMenuLoaded = ref(false)
+const systemName = ref(getSystemName())
+
+// 提供系统名称给子组件，允许子组件更新
+provide('systemName', systemName)
 
 // 获取用户信息
 const getUserInfo = () => {
@@ -151,15 +155,24 @@ const checkMobile = () => {
   }
 }
 
+// 监听 localStorage 变化，实时更新系统名称
+const handleStorageChange = (e: StorageEvent) => {
+  if (e.key === StorageKeys.SystemName && e.newValue) {
+    systemName.value = e.newValue
+  }
+}
+
 onMounted(() => {
   checkMobile()
   getUserInfo()
   loadMenuTree() // 从后端 API 获取菜单数据
   window.addEventListener('resize', checkMobile)
+  window.addEventListener('storage', handleStorageChange)
 })
 
 onUnmounted(() => {
   window.removeEventListener('resize', checkMobile)
+  window.removeEventListener('storage', handleStorageChange)
 })
 
 // 监听路由变化，关闭移动端菜单
@@ -182,7 +195,7 @@ watch(
           <Fold v-if="isSidebarCollapsed" />
           <Expand v-else />
         </el-icon>
-        <h1 class="logo" :class="{ 'hidden': isMobile }">智能管理系统</h1>
+        <h1 class="logo" :class="{ 'hidden': isMobile }">{{ systemName }}</h1>
       </div>
       <div class="header-right">
         <el-dropdown trigger="hover" @command="handleDropdownCommand">

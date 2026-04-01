@@ -15,8 +15,10 @@ import { http } from '../utils/http'
 import api from '../api/index'
 import { showSuccessNotification, showErrorNotification } from '../utils/notification'
 import { aesEncrypt } from '../utils/crypto'
-import { setItem, removeItem, StorageKeys, setUserPermissions } from '@/utils/storage'
+import { setItem, removeItem, StorageKeys, setUserPermissions, setSystemName, getSystemName } from '@/utils/storage'
 import { initRouteConfig } from '@/router/detail'
+import { getAllSettings, getPublicSettings } from '@/api/role'
+import type { SettingDto } from '@/api/role'
 
 
 
@@ -51,6 +53,9 @@ const iconComponents = {
 }
 
 const router = useRouter()
+
+// 系统名称（从 localStorage 读取）
+const systemName = ref(getSystemName())
 
 const formRef = ref()
 const registerFormRef = ref()
@@ -218,10 +223,11 @@ const handleSubmit = async () => {
 
       // 获取用户权限
       try {
-        const permissionResponse = await http.get<Array<{ code: string }>>(api.Permission.GetUserPermissionsAsync, {
+        const permissionResponse = await http.get<{ success: boolean; data: { code: string }[] }>(api.Permission.GetUserPermissionsAsync, {
           params: { userId: response.data?.userId }
         })
-        if (permissionResponse.success && permissionResponse.data) {
+        // 响应拦截器返回的是 ApiRequestResult 结构
+        if (permissionResponse.success && Array.isArray(permissionResponse.data)) {
           // 从 PermissionDto[] 中提取 code 字段
           const permissionCodes = permissionResponse.data.map(p => p.code)
           setUserPermissions(permissionCodes)
@@ -229,6 +235,27 @@ const handleSubmit = async () => {
       } catch (permError) {
         console.error('获取用户权限失败:', permError)
         // 权限获取失败不影响登录流程
+      }
+
+      // 获取系统配置并存入缓存
+      try {
+        const settingsResponse = await getAllSettings()
+        if (settingsResponse.success && settingsResponse.data) {
+          const settings = settingsResponse.data as SettingDto[]
+          settings.forEach(setting => {
+            // 系统名称
+            if (setting.key === 'SystemName' && setting.value) {
+              setSystemName(setting.value)
+            }
+            // 系统描述
+            if (setting.key === 'SystemDescription' && setting.value) {
+              setItem(StorageKeys.SystemDescription, setting.value)
+            }
+          })
+        }
+      } catch (settingsError) {
+        console.error('获取系统配置失败:', settingsError)
+        // 配置获取失败不影响登录流程
       }
 
       // 显示成功提示
@@ -431,8 +458,33 @@ const handleForgotPassword = async () => {
   }
 }
 
+// 加载公开的系统设置
+const loadPublicSettings = async () => {
+  try {
+    const response = await getPublicSettings()
+    if (response.success && response.data) {
+      const settings = response.data as SettingDto[]
+      settings.forEach(setting => {
+        if (setting.key === 'SystemName' && setting.value) {
+          systemName.value = setting.value
+          setSystemName(setting.value)
+        }
+        if (setting.key === 'SystemDescription' && setting.value) {
+          setItem(StorageKeys.SystemDescription, setting.value)
+        }
+      })
+    }
+  } catch (error) {
+    console.error('获取公开设置失败:', error)
+    // 获取失败时使用默认值
+  }
+}
+
 // 轮播文案
 onMounted(() => {
+  // 加载公开的系统设置
+  loadPublicSettings()
+
   setInterval(() => {
     currentTextIndex.value = (currentTextIndex.value + 1) % brandTexts.value.length
   }, 4000)
@@ -466,7 +518,7 @@ onMounted(() => {
               stroke-linejoin="round" />
           </svg>
         </div>
-        <h1 class="brand-title">智能管理系统</h1>
+        <h1 class="brand-title">{{ systemName }}</h1>
         <p class="brand-subtitle">让工作更高效，让生活更智能</p>
 
         <!-- 动态文案轮播 -->

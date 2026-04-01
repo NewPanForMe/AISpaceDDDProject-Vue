@@ -128,6 +128,14 @@ public interface ISettingService : IApplicationService
     /// </summary>
     /// <param name="request">批量更新设置请求</param>
     Task<ApiRequestResult> BatchUpdateSettingsAsync(BatchUpdateSettingsRequest request);
+
+    /// <summary>
+    /// 获取公开的系统设置（无需登录）
+    /// </summary>
+    /// <remarks>
+    /// 返回系统名称、系统描述等公开配置，用于登录页等无需认证的场景
+    /// </remarks>
+    Task<ApiRequestResult> GetPublicSettingsAsync();
 }
 
 /// <summary>

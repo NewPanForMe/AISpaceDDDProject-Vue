@@ -152,24 +152,24 @@
         </el-form-item>
         <el-form-item label="选择权限">
           <div v-loading="permissionLoading" class="permission-container">
-            <div v-for="group in menuGroups" :key="group.menuId" class="permission-group">
+            <div v-for="group in moduleGroups" :key="group.module" class="permission-group">
               <div class="module-header">
                 <el-checkbox
-                  :model-value="isMenuAllSelected(group.menuId)"
-                  :indeterminate="isMenuIndeterminate(group.menuId)"
-                  @change="(val: boolean) => toggleMenuButtons(group.menuId, val)"
+                  :model-value="isModuleAllSelected(group.module)"
+                  :indeterminate="isModuleIndeterminate(group.module)"
+                  @change="(val: boolean) => toggleModulePermissions(group.module, val)"
                 >
-                  {{ group.menuName }}
+                  {{ group.moduleName }}
                 </el-checkbox>
               </div>
-              <el-checkbox-group v-model="permissionForm.selectedButtonIds" class="permission-checkbox-group">
+              <el-checkbox-group v-model="permissionForm.selectedPermissionIds" class="permission-checkbox-group">
                 <el-checkbox
-                  v-for="button in getButtonsByMenu(group.menuId)"
-                  :key="button.id"
-                  :label="button.id"
-                  :value="button.id"
+                  v-for="permission in getPermissionsByModule(group.module)"
+                  :key="permission.id"
+                  :label="permission.id"
+                  :value="permission.id"
                 >
-                  {{ button.name }}
+                  {{ permission.name }}
                 </el-checkbox>
               </el-checkbox-group>
             </div>
@@ -194,18 +194,18 @@ import * as userApi from '@/api/user'
 import * as menuRoleApi from '@/api/menuRole'
 import * as menuApi from '@/api/menu'
 import * as permissionApi from '@/api/role'
-import { http } from '@/utils/http'
-import api from '@/api/index'
 import type { RoleDto, CreateRoleRequest, UpdateRoleRequest, UserDto, PermissionDto } from '@/api/index'
 import type { MenuTree } from '@/api/menu'
 import { showSuccessNotification, showErrorNotification } from '@/utils/notification'
-import { getItem, setItem, StorageKeys } from '@/utils/storage'
+import { getItem, setItem, removeItem, StorageKeys, clearUserPermissions, setUserPermissions } from '@/utils/storage'
 import { useButtons } from '@/utils/buttons'
+import { http } from '@/utils/http'
+import api from '@/api/index'
 
 // 解构导入 API 函数
 const { getRoles, createRole: createRoleApi, updateRole: updateRoleApi, deleteRole: deleteRoleApi, enableRole, disableRole, getRoleUserIds, assignRoleUsers } = roleApi
 const { getUsers } = userApi
-const { getRolePermissionIds, assignRolePermissions } = permissionApi
+const { getRolePermissionIds, assignRolePermissions, getAllEnabledPermissions } = permissionApi
 
 // 按钮管理
 const { hasBtn, hasAnyBtn } = useButtons('users-role')
@@ -278,75 +278,61 @@ const menuForm = ref<{
 // 分配权限相关数据
 const permissionDialogVisible = ref(false)
 const permissionLoading = ref(false)
-const allButtons = ref<ButtonDto[]>([])
+const allPermissions = ref<PermissionDto[]>([])
 const permissionForm = ref<{
   roleId: string
   roleName: string
-  selectedButtonIds: string[]
+  selectedPermissionIds: string[]
 }>({
   roleId: '',
   roleName: '',
-  selectedButtonIds: []
+  selectedPermissionIds: []
 })
 
-// 按钮数据类型
-interface ButtonDto {
-  id: string
-  name: string
-  code: string
-  menuId: string
-  menuName?: string
-  permissionCode?: string
-  icon?: string
-  sortOrder: number
-  status: number
-  description?: string
+// 模块分组列表（动态从权限数据获取）
+const moduleGroups = ref<{ module: string; moduleName: string }[]>([])
+
+// 根据模块获取权限列表
+const getPermissionsByModule = (module: string) => {
+  return allPermissions.value.filter(p => p.module === module)
 }
 
-// 菜单分组列表（动态从按钮数据获取）
-const menuGroups = ref<{ menuId: string; menuName: string }[]>([])
-
-// 根据菜单获取按钮列表
-const getButtonsByMenu = (menuId: string) => {
-  return allButtons.value.filter(b => b.menuId === menuId)
-}
-
-// 全选所有按钮
+// 全选所有权限
 const selectAllPermissions = () => {
-  permissionForm.value.selectedButtonIds = allButtons.value.map(b => b.id)
+  permissionForm.value.selectedPermissionIds = allPermissions.value.map(p => p.id)
 }
 
 // 取消全选
 const deselectAllPermissions = () => {
-  permissionForm.value.selectedButtonIds = []
+  permissionForm.value.selectedPermissionIds = []
 }
 
-// 判断菜单是否全选
-const isMenuAllSelected = (menuId: string) => {
-  const menuButtons = getButtonsByMenu(menuId)
-  if (menuButtons.length === 0) return false
-  return menuButtons.every(b => permissionForm.value.selectedButtonIds.includes(b.id))
+// 判断模块是否全选
+const isModuleAllSelected = (module: string) => {
+  const modulePermissions = getPermissionsByModule(module)
+  if (modulePermissions.length === 0) return false
+  return modulePermissions.every(p => permissionForm.value.selectedPermissionIds.includes(p.id))
 }
 
-// 判断菜单是否部分选中（半选状态）
-const isMenuIndeterminate = (menuId: string) => {
-  const menuButtons = getButtonsByMenu(menuId)
-  if (menuButtons.length === 0) return false
-  const selectedCount = menuButtons.filter(b => permissionForm.value.selectedButtonIds.includes(b.id)).length
-  return selectedCount > 0 && selectedCount < menuButtons.length
+// 判断模块是否部分选中（半选状态）
+const isModuleIndeterminate = (module: string) => {
+  const modulePermissions = getPermissionsByModule(module)
+  if (modulePermissions.length === 0) return false
+  const selectedCount = modulePermissions.filter(p => permissionForm.value.selectedPermissionIds.includes(p.id)).length
+  return selectedCount > 0 && selectedCount < modulePermissions.length
 }
 
-// 切换菜单按钮选中状态
-const toggleMenuButtons = (menuId: string, checked: boolean) => {
-  const menuButtonIds = getButtonsByMenu(menuId).map(b => b.id)
+// 切换模块权限选中状态
+const toggleModulePermissions = (module: string, checked: boolean) => {
+  const modulePermissionIds = getPermissionsByModule(module).map(p => p.id)
   if (checked) {
-    // 添加该菜单所有按钮
-    const newIds = new Set([...permissionForm.value.selectedButtonIds, ...menuButtonIds])
-    permissionForm.value.selectedButtonIds = Array.from(newIds)
+    // 添加该模块所有权限
+    const newIds = new Set([...permissionForm.value.selectedPermissionIds, ...modulePermissionIds])
+    permissionForm.value.selectedPermissionIds = Array.from(newIds)
   } else {
-    // 移除该菜单所有按钮
-    permissionForm.value.selectedButtonIds = permissionForm.value.selectedButtonIds.filter(
-      id => !menuButtonIds.includes(id)
+    // 移除该模块所有权限
+    permissionForm.value.selectedPermissionIds = permissionForm.value.selectedPermissionIds.filter(
+      id => !modulePermissionIds.includes(id)
     )
   }
 }
@@ -684,6 +670,10 @@ const submitMenuForm = async () => {
 
     showSuccessNotification({ title: '成功', message: '分配模块成功' })
     menuDialogVisible.value = false
+
+    // 清除菜单缓存，下次访问时会重新获取
+    removeItem(StorageKeys.SidebarMenu)
+
     await loadRoleData()  // 刷新数据
   } catch (error) {
     console.error('分配模块失败:', error)
@@ -693,34 +683,31 @@ const submitMenuForm = async () => {
   }
 }
 
-// 加载所有按钮
-const loadAllButtons = async () => {
+// 加载所有权限
+const loadAllPermissions = async () => {
   try {
-    // 获取所有按钮（不分页）
-    const response = await http.get<{ list: ButtonDto[]; total: number }>(
-      api.Button.GetButtonsAsync,
-      { params: { pageNum: 1, pageSize: 1000 } }
-    )
+    // 获取所有启用的权限
+    const response = await getAllEnabledPermissions()
 
     if (response.data) {
-      allButtons.value = response.data.list || []
+      allPermissions.value = response.data || []
 
-      // 动态提取菜单分组（去重）
-      const menuMap = new Map<string, string>()
-      allButtons.value.forEach(b => {
-        if (b.menuName && !menuMap.has(b.menuId)) {
-          menuMap.set(b.menuId, b.menuName)
+      // 动态提取模块分组（去重）
+      const moduleMap = new Map<string, string>()
+      allPermissions.value.forEach(p => {
+        if (!moduleMap.has(p.module)) {
+          moduleMap.set(p.module, p.module)
         }
       })
 
       // 转换为数组并排序
-      menuGroups.value = Array.from(menuMap.entries()).map(([menuId, menuName]) => ({
-        menuId,
-        menuName
+      moduleGroups.value = Array.from(moduleMap.entries()).map(([module, moduleName]) => ({
+        module,
+        moduleName
       }))
     }
   } catch (error) {
-    console.error('加载按钮列表失败:', error)
+    console.error('加载权限列表失败:', error)
   }
 }
 
@@ -729,44 +716,21 @@ const assignPermissions = async (row: RoleDto) => {
   permissionForm.value = {
     roleId: row.id,
     roleName: row.name,
-    selectedButtonIds: []
+    selectedPermissionIds: []
   }
 
   permissionLoading.value = true
   permissionDialogVisible.value = true
 
   try {
-    // 加载所有按钮
-    await loadAllButtons()
+    // 加载所有权限
+    await loadAllPermissions()
 
     // 获取角色已有的权限ID列表
     const rolePermissionResponse = await getRolePermissionIds(row.id)
-    if (!rolePermissionResponse.data || rolePermissionResponse.data.length === 0) {
-      // 没有权限，直接返回
-      return
+    if (rolePermissionResponse.data) {
+      permissionForm.value.selectedPermissionIds = rolePermissionResponse.data
     }
-
-    // 获取所有权限列表
-    const allPermissionsResponse = await http.get<PermissionDto[]>(
-      api.Permission.GetAllEnabledPermissionsAsync
-    )
-
-    if (!allPermissionsResponse.data) {
-      return
-    }
-
-    // 根据权限ID找到对应的权限编码
-    const rolePermissionIds = rolePermissionResponse.data
-    const permissionCodes = allPermissionsResponse.data
-      .filter((p: PermissionDto) => rolePermissionIds.includes(p.id))
-      .map((p: PermissionDto) => p.code)
-
-    // 根据权限编码匹配按钮
-    const matchedButtonIds = allButtons.value
-      .filter(b => b.permissionCode && permissionCodes.includes(b.permissionCode))
-      .map(b => b.id)
-
-    permissionForm.value.selectedButtonIds = matchedButtonIds
   } catch (error) {
     console.error('加载角色权限失败:', error)
     showErrorNotification({ title: '错误', message: '加载角色权限失败' })
@@ -780,33 +744,35 @@ const submitPermissionForm = async () => {
   try {
     permissionLoading.value = true
 
-    // 获取选中按钮的权限编码
-    const selectedPermissionCodes = allButtons.value
-      .filter(b => permissionForm.value.selectedButtonIds.includes(b.id) && b.permissionCode)
-      .map(b => b.permissionCode!)
-
-    // 获取所有权限，找到对应的权限ID
-    const allPermissionsResponse = await http.get<PermissionDto[]>(
-      api.Permission.GetAllEnabledPermissionsAsync
-    )
-
-    if (!allPermissionsResponse.data) {
-      showErrorNotification({ title: '错误', message: '获取权限列表失败' })
-      return
-    }
-
-    // 根据权限编码匹配权限ID
-    const permissionIds = allPermissionsResponse.data
-      .filter((p: PermissionDto) => selectedPermissionCodes.includes(p.code))
-      .map((p: PermissionDto) => p.id)
-
     await assignRolePermissions({
       roleId: permissionForm.value.roleId,
-      permissionIds: permissionIds
+      permissionIds: permissionForm.value.selectedPermissionIds
     })
 
     showSuccessNotification({ title: '成功', message: '分配权限成功' })
     permissionDialogVisible.value = false
+
+    // 清除权限缓存
+    clearUserPermissions()
+    removeItem('button_permissions')
+
+    // 重新获取当前用户的权限并更新缓存
+    const currentUserInfo = getItem<{ userId?: string }>(StorageKeys.UserInfo)
+    if (currentUserInfo?.userId) {
+      try {
+        const permResponse = await http.get<{ success: boolean; data: { code: string }[] }>(
+          api.Permission.GetUserPermissionsAsync,
+          { params: { userId: currentUserInfo.userId } }
+        )
+        if (permResponse.success && Array.isArray(permResponse.data)) {
+          const permissionCodes = permResponse.data.map(p => p.code)
+          setUserPermissions(permissionCodes)
+        }
+      } catch (permError) {
+        console.error('重新获取用户权限失败:', permError)
+      }
+    }
+
     await loadRoleData()  // 刷新数据
   } catch (error) {
     console.error('分配权限失败:', error)

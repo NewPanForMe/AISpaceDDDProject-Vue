@@ -51,6 +51,7 @@ public class MenuController : BaseApiController
     /// </summary>
     [HttpPost]
     [ActionName("CreateMenuAsync")]
+    [Permission("menu:add")]
     [ApiSearch(Name = "创建菜单", Description = "在系统中创建新的菜单项", Category = ApiSearchCategory.Menu)]
     public async Task<ApiRequestResult> CreateMenuAsync([FromBody] MenuDto menuDto)
     {
@@ -63,6 +64,7 @@ public class MenuController : BaseApiController
     /// </summary>
     [HttpPut]
     [ActionName("UpdateMenuAsync")]
+    [Permission("menu:edit")]
     [ApiSearch(Name = "更新菜单", Description = "更新系统中现有的菜单项", Category = ApiSearchCategory.Menu)]
     public async Task<ApiRequestResult> UpdateMenuAsync([FromBody] MenuDto menuDto)
     {
@@ -75,6 +77,7 @@ public class MenuController : BaseApiController
     /// </summary>
     [HttpDelete]
     [ActionName("DeleteMenuAsync")]
+    [Permission("menu:delete")]
     [ApiSearch(Name = "删除菜单", Description = "根据ID删除系统中的菜单项", Category = ApiSearchCategory.Menu)]
     public async Task<ApiRequestResult> DeleteMenuAsync([FromQuery] Guid id)
     {
@@ -87,6 +90,7 @@ public class MenuController : BaseApiController
     /// </summary>
     [HttpPost]
     [ActionName("EnableMenuAsync")]
+    [Permission("menu:enable")]
     [ApiSearch(Name = "启用菜单", Description = "启用一个被禁用的菜单项", Category = ApiSearchCategory.Menu)]
     public async Task<ApiRequestResult> EnableMenuAsync([FromQuery] Guid id)
     {
@@ -98,6 +102,7 @@ public class MenuController : BaseApiController
     /// </summary>
     [HttpPost]
     [ActionName("DisableMenuAsync")]
+    [Permission("menu:disable")]
     [ApiSearch(Name = "禁用菜单", Description = "禁用一个启用的菜单项", Category = ApiSearchCategory.Menu)]
     public async Task<ApiRequestResult> DisableMenuAsync([FromQuery] Guid id)
     {

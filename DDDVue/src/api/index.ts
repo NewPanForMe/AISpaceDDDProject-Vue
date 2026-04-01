@@ -204,6 +204,7 @@ export interface ApiConfig {
   BaseApi: Record<string, any>;
   Login: {
     LoginAsync: string;
+    GetPublicSettingsAsync: string;
   };
   Menu: {
     GetMenusAsync: string;
@@ -278,16 +279,6 @@ export interface ApiConfig {
     GetUserPermissionsAsync: string;
     HasPermissionAsync: string;
   };
-  Button: {
-    GetButtonsAsync: string;
-    GetButtonByIdAsync: string;
-    GetButtonsByMenuIdAsync: string;
-    CreateButtonAsync: string;
-    UpdateButtonAsync: string;
-    DeleteButtonAsync: string;
-    EnableButtonAsync: string;
-    DisableButtonAsync: string;
-  };
 }
 
 // ==================== API 配置对象 ====================
@@ -296,6 +287,7 @@ const api: ApiConfig = {
   BaseApi: {},
   Login: {
     LoginAsync: 'api/Login/LoginAsync',
+    GetPublicSettingsAsync: 'api/Login/GetPublicSettingsAsync',
   },
   Menu: {
     GetMenusAsync: 'api/Menu/GetMenusAsync',
@@ -369,16 +361,6 @@ const api: ApiConfig = {
     AssignRolePermissionsAsync: 'api/Permission/AssignRolePermissionsAsync',
     GetUserPermissionsAsync: 'api/Permission/GetUserPermissionsAsync',
     HasPermissionAsync: 'api/Permission/HasPermissionAsync',
-  },
-  Button: {
-    GetButtonsAsync: 'api/Button/GetButtonsAsync',
-    GetButtonByIdAsync: 'api/Button/GetButtonByIdAsync',
-    GetButtonsByMenuIdAsync: 'api/Button/GetButtonsByMenuIdAsync',
-    CreateButtonAsync: 'api/Button/CreateButtonAsync',
-    UpdateButtonAsync: 'api/Button/UpdateButtonAsync',
-    DeleteButtonAsync: 'api/Button/DeleteButtonAsync',
-    EnableButtonAsync: 'api/Button/EnableButtonAsync',
-    DisableButtonAsync: 'api/Button/DisableButtonAsync',
   },
 };
 
