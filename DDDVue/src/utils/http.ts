@@ -51,6 +51,10 @@ const convertToCamelCase = (obj: any): any => {
 // 响应拦截器
 service.interceptors.response.use(
   (response) => {
+    // 如果是 blob 类型，直接返回原始数据
+    if (response.config.responseType === 'blob') {
+      return response.data
+    }
     // 转换后端返回的 PascalCase 属性名为 camelCase
     const data = convertToCamelCase(response.data)
     return data

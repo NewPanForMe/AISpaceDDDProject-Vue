@@ -67,7 +67,7 @@ public static class MenuSeeder
         var userMenu = Menu.Create(
             name: "用户管理",
             path: "users",
-            component: "Users/Users",
+            component: "", // 有子菜单，不需要组件
             icon: "User",
             parentId: null,
             sortOrder: 2,
@@ -86,9 +86,9 @@ public static class MenuSeeder
             status: 1
         );
         menus.Add(roleMenu);
-        // 3. 角色管理
+        // 3. 用户信息
         var infoMenu = Menu.Create(
-            name: "用户管理",
+            name: "用户信息",
             path: "users-info",
             component: "Users/Users",
             icon: "UserFilled",
@@ -121,6 +121,21 @@ public static class MenuSeeder
         );
         menus.Add(settingsMenu);
 
+
+
+        // 1. 日志（仪表盘）
+        var logMenu = Menu.Create(
+            name: "日志管理",
+            path: "logs",
+            component: "", // 有子菜单，不需要组件
+            icon: "HomeFilled",
+            parentId: null,
+            sortOrder: 6,
+            status: 1
+        );
+        menus.Add(logMenu);
+
+
         // ==================== 二级菜单 ====================
 
         // 系统设置 -> 菜单管理
@@ -148,21 +163,43 @@ public static class MenuSeeder
         menus.Add(permissionMenu);
 
 
-        // 系统设置 -> 权限管理
+        // 系统设置 -> 系统管理
         var systemMenu = Menu.Create(
             name: "系统管理",
             path: "settings-system",
             component: "Settings/System",
             icon: "Lock",
             parentId: settingsMenu.Id,
-            sortOrder: 2,
+            sortOrder: 3,
             status: 1
         );
         menus.Add(systemMenu);
 
+        // 日志管理 -> 日志列表
+        var logsMenu = Menu.Create(
+            name: "日志列表",
+            path: "logs-log",
+            component: "LogV/Log",
+            icon: "Document",
+            parentId: logMenu.Id,
+            sortOrder: 1,
+            status: 1
+        );
+        menus.Add(logsMenu);
 
 
 
+        // 系统设置 -> 字典管理
+        var dicMenu = Menu.Create(
+            name: "字典管理",
+            path: "settings-dictionary",
+            component: "Settings/Dictionary",
+            icon: "Collection",
+            parentId: settingsMenu.Id,
+            sortOrder: 4,
+            status: 1
+        );
+        menus.Add(dicMenu);
 
         return menus;
     }

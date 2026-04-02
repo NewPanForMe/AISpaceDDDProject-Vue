@@ -1,4 +1,4 @@
-import { ref } from 'vue'
+import { ref, h } from 'vue'
 import * as menuApi from '@/api/menu'
 import type { RouteConfig } from '@/api/menu'
 import { getItem, setItem, StorageKeys } from '@/utils/storage'
@@ -7,10 +7,15 @@ import { getItem, setItem, StorageKeys } from '@/utils/storage'
 const routes = ref<RouteConfig[]>([])
 const isLoading = ref(true)
 
-// 简单的 404 组件（避免循环依赖）
+// 简单的 404 组件（使用渲染函数，避免运行时编译）
 const ErrorComponent = {
     name: 'Error404',
-    template: '<div style="padding: 40px; text-align: center;"><h1>404</h1><p>页面不存在</p></div>'
+    render() {
+        return h('div', { style: 'padding: 40px; text-align: center;' }, [
+            h('h1', '404'),
+            h('p', '页面不存在')
+        ])
+    }
 }
 
 // 使用 import.meta.glob 预加载所有 views/home 下的组件

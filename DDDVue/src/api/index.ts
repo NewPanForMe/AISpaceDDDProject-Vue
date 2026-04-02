@@ -168,6 +168,44 @@ export interface PermissionDto {
   updatedAt?: string;
 }
 
+// ==================== 操作日志模块 ====================
+export interface OperationLogDto {
+  id: string;
+  userId: string;
+  userName: string;
+  realName?: string;
+  operationType: string;
+  module: string;
+  description?: string;
+  requestMethod: string;
+  requestPath: string;
+  requestParams?: string;
+  responseResult?: string;
+  ipAddress?: string;
+  status: string;
+  errorMessage?: string;
+  duration: number;
+  browser?: string;
+  osInfo?: string;
+  createdAt: string;
+}
+
+export interface OperationLogQueryRequest {
+  pageNum: number;
+  pageSize: number;
+  operationType?: string;
+  module?: string;
+  status?: string;
+  userName?: string;
+  startTime?: string;
+  endTime?: string;
+}
+
+export interface ClearLogsRequest {
+  startTime?: string;
+  endTime?: string;
+}
+
 export interface CreatePermissionRequest {
   code: string;
   name: string;
@@ -187,6 +225,51 @@ export interface UpdatePermissionRequest {
 export interface AssignRolePermissionsRequest {
   roleId: string;
   permissionIds: string[];
+}
+
+// ==================== 字典模块 ====================
+export interface DictionaryDto {
+  id: string;
+  code: string;
+  name: string;
+  value: string;
+  type: string;
+  status: number;
+  sortOrder: number;
+  description?: string;
+  remark?: string;
+  createdAt: string;
+  updatedAt?: string;
+}
+
+export interface DictionaryQueryRequest {
+  pageNum: number;
+  pageSize: number;
+  code?: string;
+  name?: string;
+  type?: string;
+  status?: number;
+}
+
+export interface CreateDictionaryRequest {
+  code: string;
+  name: string;
+  value: string;
+  type: string;
+  sortOrder?: number;
+  description?: string;
+  remark?: string;
+}
+
+export interface UpdateDictionaryRequest {
+  id: string;
+  name?: string;
+  value?: string;
+  type?: string;
+  sortOrder?: number;
+  description?: string;
+  remark?: string;
+  status?: number;
 }
 
 // 分页响应接口
@@ -279,6 +362,27 @@ export interface ApiConfig {
     GetUserPermissionsAsync: string;
     HasPermissionAsync: string;
   };
+  OperationLog: {
+    GetOperationLogsAsync: string;
+    GetOperationLogByIdAsync: string;
+    DeleteOperationLogAsync: string;
+    BatchDeleteOperationLogsAsync: string;
+    ClearOperationLogsAsync: string;
+    GetOperationTypeStatisticsAsync: string;
+    GetModuleStatisticsAsync: string;
+    ExportOperationLogsAsync: string;
+  };
+  Dictionary: {
+    GetDictionariesAsync: string;
+    GetDictionaryByIdAsync: string;
+    GetDictionaryByCodeAsync: string;
+    GetDictionariesByTypeAsync: string;
+    CreateDictionaryAsync: string;
+    UpdateDictionaryAsync: string;
+    DeleteDictionaryAsync: string;
+    EnableDictionaryAsync: string;
+    DisableDictionaryAsync: string;
+  };
 }
 
 // ==================== API 配置对象 ====================
@@ -361,6 +465,27 @@ const api: ApiConfig = {
     AssignRolePermissionsAsync: 'api/Permission/AssignRolePermissionsAsync',
     GetUserPermissionsAsync: 'api/Permission/GetUserPermissionsAsync',
     HasPermissionAsync: 'api/Permission/HasPermissionAsync',
+  },
+  OperationLog: {
+    GetOperationLogsAsync: 'api/OperationLog/GetOperationLogsAsync',
+    GetOperationLogByIdAsync: 'api/OperationLog/GetOperationLogByIdAsync',
+    DeleteOperationLogAsync: 'api/OperationLog/DeleteOperationLogAsync',
+    BatchDeleteOperationLogsAsync: 'api/OperationLog/BatchDeleteOperationLogsAsync',
+    ClearOperationLogsAsync: 'api/OperationLog/ClearOperationLogsAsync',
+    GetOperationTypeStatisticsAsync: 'api/OperationLog/GetOperationTypeStatisticsAsync',
+    GetModuleStatisticsAsync: 'api/OperationLog/GetModuleStatisticsAsync',
+    ExportOperationLogsAsync: 'api/OperationLog/ExportOperationLogsAsync',
+  },
+  Dictionary: {
+    GetDictionariesAsync: 'api/Dictionary/GetDictionariesAsync',
+    GetDictionaryByIdAsync: 'api/Dictionary/GetDictionaryByIdAsync',
+    GetDictionaryByCodeAsync: 'api/Dictionary/GetDictionaryByCodeAsync',
+    GetDictionariesByTypeAsync: 'api/Dictionary/GetDictionariesByTypeAsync',
+    CreateDictionaryAsync: 'api/Dictionary/CreateDictionaryAsync',
+    UpdateDictionaryAsync: 'api/Dictionary/UpdateDictionaryAsync',
+    DeleteDictionaryAsync: 'api/Dictionary/DeleteDictionaryAsync',
+    EnableDictionaryAsync: 'api/Dictionary/EnableDictionaryAsync',
+    DisableDictionaryAsync: 'api/Dictionary/DisableDictionaryAsync',
   },
 };
 

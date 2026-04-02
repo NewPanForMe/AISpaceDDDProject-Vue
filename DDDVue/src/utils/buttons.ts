@@ -53,6 +53,18 @@ const BUTTON_PERMISSION_MAP: Record<string, string> = {
   'cache:clear_list': 'cache:clear_list',
   'cache:clear_setting': 'cache:clear_setting',
   'cache:clear_all': 'cache:clear_all',
+
+  // 日志管理
+  'log:delete': 'log:delete',
+  'log:clear': 'log:clear',
+  'log:export': 'log:export',
+
+  // 字典管理
+  'dictionary:add': 'dictionary:add',
+  'dictionary:edit': 'dictionary:edit',
+  'dictionary:delete': 'dictionary:delete',
+  'dictionary:enable': 'dictionary:enable',
+  'dictionary:disable': 'dictionary:disable',
 }
 
 /**

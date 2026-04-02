@@ -2,7 +2,7 @@ using DDDProject.Domain.Models;
 using DDDProject.API.Extensions;
 using DDDProject.API.Middlewares;
 using DDDProject.API.Attributes;
-using DDDProject.Application.Common;
+using DDDProject.API.Filters;
 using DDDProject.Application.Interfaces;
 using DDDProject.Infrastructure;
 using DDDProject.Infrastructure.Contexts;
@@ -41,8 +41,15 @@ namespace DDDProject.API
                 });
             });
 
+            // 注册操作日志过滤器为 Scoped（因为依赖 Scoped 服务）
+            services.AddScoped<OperationLogFilter>();
+
             // 添加服务到容器
-            services.AddControllers();
+            services.AddControllers(options =>
+            {
+                // 添加操作日志记录过滤器（使用 ServiceFilter 支持 Scoped 依赖）
+                options.Filters.AddService<OperationLogFilter>();
+            });
             services.AddEndpointsApiExplorer();
 
             // 配置
@@ -130,6 +137,7 @@ namespace DDDProject.API
                     context.SeedMenus();
                     context.SeedPermissions();
                     context.SeedSettings();
+                    context.SeedDictionaries();
 
                     // 2. 测试权限数据（用于 PermissionTestController）
                     context.SeedTestPermissions();

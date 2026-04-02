@@ -113,23 +113,29 @@
     </el-dialog>
 
     <!-- 分配模块对话框 -->
-    <el-dialog v-model="menuDialogVisible" title="分配模块" width="600px" :destroy-on-close="true">
+    <el-dialog v-model="menuDialogVisible" title="分配模块" width="800px" :destroy-on-close="true">
       <el-form label-width="80px">
         <el-form-item label="角色名称">
           <el-input v-model="menuForm.roleName" disabled />
         </el-form-item>
+        <el-form-item label="快捷操作">
+          <el-button size="small" type="primary" @click="selectAllMenus">全选</el-button>
+          <el-button size="small" @click="deselectAllMenus">取消全选</el-button>
+          <el-button size="small" type="info" @click="expandAllMenus">展开</el-button>
+          <el-button size="small" type="info" @click="collapseAllMenus">折叠</el-button>
+        </el-form-item>
         <el-form-item label="选择模块">
-          <el-tree
-            ref="menuTreeRef"
-            :data="allMenus"
-            :props="{ label: 'name', children: 'children' }"
-            show-checkbox
-            node-key="id"
-            default-expand-all
-            :check-strictly="false"
-            v-loading="menuLoading"
-            style="max-height: 400px; overflow-y: auto;"
-          />
+          <div v-loading="menuLoading" class="menu-container">
+            <el-tree
+              ref="menuTreeRef"
+              :data="allMenus"
+              :props="{ label: 'name', children: 'children' }"
+              show-checkbox
+              node-key="id"
+              default-expand-all
+              :check-strictly="false"
+            />
+          </div>
         </el-form-item>
       </el-form>
       <template #footer>
@@ -477,6 +483,10 @@ const submitRoleForm = async () => {
     }
 
     dialogVisible.value = false
+    
+    // 清除缓存后重新加载数据
+    const cacheKey = `${StorageKeys.List}_role_${pagination.value.pageNum}_${pagination.value.pageSize}`
+    removeItem(cacheKey)
     await loadRoleData()
   } catch (error) {
     console.log('验证失败或保存失败:', error)
@@ -500,6 +510,10 @@ const toggleRoleStatus = async (row: RoleDto) => {
     }
 
     showSuccessNotification({ title: '成功', message: `${action}成功` })
+    
+    // 清除缓存后重新加载数据
+    const cacheKey = `${StorageKeys.List}_role_${pagination.value.pageNum}_${pagination.value.pageSize}`
+    removeItem(cacheKey)
     await loadRoleData()
   } catch (error) {
     console.log('取消操作或操作失败')
@@ -559,6 +573,10 @@ const deleteRole = async (row: RoleDto) => {
 
     await deleteRoleApi(row.id)
     showSuccessNotification({ title: '成功', message: '删除成功' })
+    
+    // 清除缓存后重新加载数据
+    const cacheKey = `${StorageKeys.List}_role_${pagination.value.pageNum}_${pagination.value.pageSize}`
+    removeItem(cacheKey)
     await loadRoleData()
   } catch (error) {
     console.log('取消删除或删除失败')
@@ -605,7 +623,11 @@ const submitUserForm = async () => {
 
     showSuccessNotification({ title: '成功', message: '分配用户成功' })
     userDialogVisible.value = false
-    await loadRoleData()  // 刷新数据
+    
+    // 清除缓存后重新加载数据
+    const cacheKey = `${StorageKeys.List}_role_${pagination.value.pageNum}_${pagination.value.pageSize}`
+    removeItem(cacheKey)
+    await loadRoleData()
   } catch (error) {
     console.error('分配用户失败:', error)
     showErrorNotification({ title: '错误', message: '分配用户失败' })
@@ -638,14 +660,14 @@ const assignMenus = async (row: RoleDto) => {
   menuDialogVisible.value = true
 
   try {
-    // 加载所有菜单
+    // 加载菜单数据
     await loadAllMenus()
 
     // 获取角色已有的菜单
-    const response = await menuRoleApi.getRoleMenuIds(row.id)
-    if (response.data && menuTreeRef.value) {
+    const menuResponse = await menuRoleApi.getRoleMenuIds(row.id)
+    if (menuResponse.data && menuTreeRef.value) {
       // 设置已选中的菜单
-      menuTreeRef.value.setCheckedKeys(response.data, false)
+      menuTreeRef.value.setCheckedKeys(menuResponse.data, false)
     }
   } catch (error) {
     console.error('加载角色菜单失败:', error)
@@ -653,6 +675,65 @@ const assignMenus = async (row: RoleDto) => {
   } finally {
     menuLoading.value = false
   }
+}
+
+// 全选所有菜单
+const selectAllMenus = () => {
+  if (menuTreeRef.value) {
+    // 获取所有菜单节点ID（包括子节点）
+    const allMenuIds = getAllMenuIds(allMenus.value)
+    menuTreeRef.value.setCheckedKeys(allMenuIds, false)
+  }
+}
+
+// 取消全选菜单
+const deselectAllMenus = () => {
+  if (menuTreeRef.value) {
+    menuTreeRef.value.setCheckedKeys([], false)
+  }
+}
+
+// 展开所有菜单节点
+const expandAllMenus = () => {
+  if (menuTreeRef.value) {
+    // 获取所有菜单节点ID
+    const allMenuIds = getAllMenuIds(allMenus.value)
+    allMenuIds.forEach(id => {
+      const node = menuTreeRef.value.getNode(id)
+      if (node) {
+        node.expanded = true
+      }
+    })
+  }
+}
+
+// 折叠所有菜单节点
+const collapseAllMenus = () => {
+  if (menuTreeRef.value) {
+    // 获取所有菜单节点ID
+    const allMenuIds = getAllMenuIds(allMenus.value)
+    allMenuIds.forEach(id => {
+      const node = menuTreeRef.value.getNode(id)
+      if (node) {
+        node.expanded = false
+      }
+    })
+  }
+}
+
+// 递归获取所有菜单ID
+const getAllMenuIds = (menus: MenuTree[]): string[] => {
+  const ids: string[] = []
+  const traverse = (menuList: MenuTree[]) => {
+    menuList.forEach(menu => {
+      ids.push(menu.id)
+      if (menu.children && menu.children.length > 0) {
+        traverse(menu.children)
+      }
+    })
+  }
+  traverse(menus)
+  return ids
 }
 
 // 提交模块分配
@@ -663,6 +744,7 @@ const submitMenuForm = async () => {
     // 获取选中的菜单ID（包括半选中的父节点）
     const checkedKeys = menuTreeRef.value.getCheckedKeys(false)
 
+    // 分配菜单
     await menuRoleApi.assignRoleMenus({
       roleId: menuForm.value.roleId,
       menuIds: checkedKeys
@@ -674,7 +756,32 @@ const submitMenuForm = async () => {
     // 清除菜单缓存，下次访问时会重新获取
     removeItem(StorageKeys.SidebarMenu)
 
-    await loadRoleData()  // 刷新数据
+    // 清除权限缓存
+    clearUserPermissions()
+    removeItem('button_permissions')
+
+    // 清除角色列表缓存
+    const cacheKey = `${StorageKeys.List}_role_${pagination.value.pageNum}_${pagination.value.pageSize}`
+    removeItem(cacheKey)
+
+    // 重新获取当前用户的权限并更新缓存
+    const currentUserInfo = getItem<{ userId?: string }>(StorageKeys.UserInfo)
+    if (currentUserInfo?.userId) {
+      try {
+        const permResponse = await http.get<{ success: boolean; data: { code: string }[] }>(
+          api.Permission.GetUserPermissionsAsync,
+          { params: { userId: currentUserInfo.userId } }
+        )
+        if (permResponse.success && Array.isArray(permResponse.data)) {
+          const permissionCodes = permResponse.data.map(p => p.code)
+          setUserPermissions(permissionCodes)
+        }
+      } catch (permError) {
+        console.error('重新获取用户权限失败:', permError)
+      }
+    }
+
+    await loadRoleData()
   } catch (error) {
     console.error('分配模块失败:', error)
     showErrorNotification({ title: '错误', message: '分配模块失败' })
@@ -756,6 +863,10 @@ const submitPermissionForm = async () => {
     clearUserPermissions()
     removeItem('button_permissions')
 
+    // 清除角色列表缓存
+    const cacheKey = `${StorageKeys.List}_role_${pagination.value.pageNum}_${pagination.value.pageSize}`
+    removeItem(cacheKey)
+
     // 重新获取当前用户的权限并更新缓存
     const currentUserInfo = getItem<{ userId?: string }>(StorageKeys.UserInfo)
     if (currentUserInfo?.userId) {
@@ -773,7 +884,7 @@ const submitPermissionForm = async () => {
       }
     }
 
-    await loadRoleData()  // 刷新数据
+    await loadRoleData()
   } catch (error) {
     console.error('分配权限失败:', error)
     showErrorNotification({ title: '错误', message: '分配权限失败' })
@@ -831,6 +942,15 @@ onMounted(() => {
 
 .dialog-footer {
   text-align: right;
+}
+
+/* 分配模块对话框样式 */
+.menu-container {
+  max-height: 400px;
+  overflow-y: auto;
+  border: 1px solid #dcdfe6;
+  border-radius: 4px;
+  padding: 12px;
 }
 
 /* 权限分配样式 */

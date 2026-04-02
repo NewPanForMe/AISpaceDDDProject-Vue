@@ -15,6 +15,22 @@
   </thead>
   <tbody>
     <tr>
+      <td rowspan="5">2026-04-02</td>
+      <td>新增操作日志模块（OperationLog），自动记录控制器中的增删改导出等操作</td>
+    </tr>
+    <tr>
+      <td>新增 <code>OperationLogFilter</code> 过滤器，自动捕获 API 操作并记录日志</td>
+    </tr>
+    <tr>
+      <td>新增日志查询、删除、清空、统计、导出等 API 接口</td>
+    </tr>
+    <tr>
+      <td>日志记录包含：操作用户、操作类型、操作模块、请求参数、响应结果、IP地址、执行耗时、浏览器信息等</td>
+    </tr>
+    <tr>
+      <td>添加日志模块权限编码：<code>log:delete</code>、<code>log:clear</code>、<code>log:export</code></td>
+    </tr>
+    <tr>
       <td rowspan="7">2026-04-01</td>
       <td>新增自定义权限注解 <code>[Permission]</code>，支持方法级别的权限控制</td>
     </tr>
@@ -107,6 +123,107 @@
 ---
 
 ## 开发日志
+
+### 2026-04-02
+
+#### 新增功能
+
+| 模块 | 功能 | 说明 |
+|------|------|------|
+| OperationLog | 操作日志模块 | 新增操作日志实体、服务、控制器，支持日志的增删改查导出 |
+| OperationLog | 自动日志记录 | 通过 `OperationLogFilter` 过滤器自动记录控制器中的增删改导出等操作 |
+| OperationLog | 日志统计功能 | 支持按操作类型、操作模块统计日志数量 |
+| OperationLog | 日志清空功能 | 支持按时间范围清空日志 |
+
+#### 新增文件
+
+**Domain 层：**
+- `Entities/OperationLog.cs` - 操作日志实体和操作类型/模块常量
+
+**Application 层：**
+- `DTOs/OperationLogDTO.cs` - 操作日志 DTO 和查询请求类
+- `Interfaces/IOperationLogService.cs` - 操作日志服务接口
+- `Services/OperationLogService.cs` - 操作日志服务实现
+
+**Infrastructure 层：**
+- `Configuration/OperationLogConfiguration.cs` - 操作日志 EF Core 配置
+
+**API 层：**
+- `Filters/OperationLogFilter.cs` - 操作日志记录过滤器
+- `Controllers/OperationLogController.cs` - 操作日志控制器
+
+#### 数据库迁移
+
+| 迁移名称 | 说明 |
+|----------|------|
+| `AddOperationLogTable` | 创建操作日志表 |
+
+#### API 接口
+
+**OperationLogController：**
+- `GET /api/OperationLog/GetOperationLogsAsync` - 获取操作日志列表（分页、支持筛选）
+- `GET /api/OperationLog/GetOperationLogByIdAsync` - 获取操作日志详情
+- `DELETE /api/OperationLog/DeleteOperationLogAsync` - 删除操作日志
+- `DELETE /api/OperationLog/BatchDeleteOperationLogsAsync` - 批量删除操作日志
+- `DELETE /api/OperationLog/ClearOperationLogsAsync` - 清空指定时间范围的操作日志
+- `GET /api/OperationLog/GetOperationTypeStatisticsAsync` - 获取操作类型统计
+- `GET /api/OperationLog/GetModuleStatisticsAsync` - 获取操作模块统计
+- `GET /api/OperationLog/ExportOperationLogsAsync` - 导出操作日志
+
+#### 日志记录内容
+
+| 字段 | 说明 |
+|------|------|
+| UserId | 操作用户ID |
+| UserName | 操作用户名 |
+| RealName | 操作用户真实姓名 |
+| OperationType | 操作类型：Create, Update, Delete, Export, Import, Enable, Disable, Login, Logout, Assign, Other |
+| Module | 操作模块：User, Role, Menu, Permission, Setting, Log, Cache, Other |
+| Description | 操作描述（来自 `[ApiSearch]` 注解的 Name 属性） |
+| RequestMethod | 请求方法：GET, POST, PUT, DELETE |
+| RequestPath | 请求路径 |
+| RequestParams | 请求参数（JSON格式） |
+| ResponseResult | 响应结果（JSON格式） |
+| IpAddress | 客户端IP地址 |
+| Status | 执行状态：Success, Failure |
+| ErrorMessage | 错误信息（失败时记录） |
+| Duration | 执行耗时（毫秒） |
+| Browser | 浏览器信息 |
+| OsInfo | 操作系统信息 |
+
+#### 权限编码
+
+| 模块 | 权限编码 | 说明 |
+|------|----------|------|
+| Log | `log:delete` | 删除日志权限 |
+| Log | `log:clear` | 清空日志权限 |
+| Log | `log:export` | 导出日志权限 |
+
+#### 使用说明
+
+日志记录通过 `OperationLogFilter` 过滤器自动完成，无需手动调用。过滤器会自动记录以下操作：
+
+1. **POST 请求**：创建操作
+2. **PUT 请求**：更新操作
+3. **DELETE 请求**：删除操作
+4. **包含 Export 关键字的方法**：导出操作
+5. **包含 Login 关键字的方法**：登录操作
+
+**前提条件**：控制器方法必须添加 `[ApiSearch]` 注解，否则不会记录日志。
+
+```csharp
+[HttpPost]
+[ActionName("CreateUserAsync")]
+[Permission("user:add")]
+[ApiSearch(Name = "创建用户", Description = "创建新的用户", Category = ApiSearchCategory.User)]
+public async Task<ApiRequestResult> CreateUserAsync([FromBody] CreateUserRequest request)
+{
+    // 此操作会自动记录日志
+    return await _userService.CreateUserAsync(request);
+}
+```
+
+---
 
 ### 2026-03-26
 

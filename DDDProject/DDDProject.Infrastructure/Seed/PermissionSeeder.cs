@@ -108,7 +108,17 @@ public static class PermissionSeeder
             Permission.Create("button:edit", "编辑按钮", "Button", "编辑按钮信息", null, 2),
             Permission.Create("button:delete", "删除按钮", "Button", "删除按钮", null, 3),
             Permission.Create("button:enable", "启用按钮", "Button", "启用按钮", null, 4),
-            Permission.Create("button:disable", "禁用按钮", "Button", "禁用按钮", null, 5)
+            Permission.Create("button:disable", "禁用按钮", "Button", "禁用按钮", null, 5),
+
+            // 日志管理权限
+            Permission.Create("log:export", "导出日志", "Log", "导出操作日志", null, 1),
+
+            // 字典管理权限
+            Permission.Create("dictionary:add", "添加字典", "Dictionary", "添加新字典", null, 1),
+            Permission.Create("dictionary:edit", "编辑字典", "Dictionary", "编辑字典信息", null, 2),
+            Permission.Create("dictionary:delete", "删除字典", "Dictionary", "删除字典", null, 3),
+            Permission.Create("dictionary:enable", "启用字典", "Dictionary", "启用字典", null, 4),
+            Permission.Create("dictionary:disable", "禁用字典", "Dictionary", "禁用字典", null, 5)
         };
 
         return permissions;
