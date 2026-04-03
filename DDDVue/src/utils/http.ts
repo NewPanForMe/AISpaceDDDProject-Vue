@@ -31,6 +31,13 @@ service.interceptors.request.use(
   },
 );
 
+// 将 PascalCase 转换为 camelCase
+const toCamelCase = (str: string): string => {
+  if (!str) return str
+  // 处理首字母小写
+  return str.charAt(0).toLowerCase() + str.slice(1)
+}
+
 // 递归转换对象属性名为 camelCase
 const convertToCamelCase = (obj: any): any => {
   if (Array.isArray(obj)) {
@@ -39,7 +46,7 @@ const convertToCamelCase = (obj: any): any => {
     const converted: any = {}
     for (const key in obj) {
       if (Object.prototype.hasOwnProperty.call(obj, key)) {
-        const camelKey = key === 'Children' ? 'children' : key
+        const camelKey = toCamelCase(key)
         converted[camelKey] = convertToCamelCase(obj[key])
       }
     }

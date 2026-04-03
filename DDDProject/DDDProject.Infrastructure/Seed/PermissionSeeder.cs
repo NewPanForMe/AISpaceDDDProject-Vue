@@ -118,7 +118,15 @@ public static class PermissionSeeder
             Permission.Create("dictionary:edit", "编辑字典", "Dictionary", "编辑字典信息", null, 2),
             Permission.Create("dictionary:delete", "删除字典", "Dictionary", "删除字典", null, 3),
             Permission.Create("dictionary:enable", "启用字典", "Dictionary", "启用字典", null, 4),
-            Permission.Create("dictionary:disable", "禁用字典", "Dictionary", "禁用字典", null, 5)
+            Permission.Create("dictionary:disable", "禁用字典", "Dictionary", "禁用字典", null, 5),
+
+            // 站内信管理权限
+            Permission.Create("message:add", "发送消息", "Message", "发送用户消息", null, 1),
+            Permission.Create("message:edit", "编辑消息", "Message", "编辑未读消息内容", null, 2),
+            Permission.Create("message:delete", "删除消息", "Message", "删除消息", null, 3),
+            Permission.Create("message:send", "发送用户消息", "Message", "发送消息给指定用户", null, 4),
+            Permission.Create("message:system", "发送系统消息", "Message", "发送系统消息", null, 5),
+            Permission.Create("message:push", "推送消息", "Message", "推送系统消息给所有或指定角色用户", null, 6)
         };
 
         return permissions;

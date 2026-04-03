@@ -272,6 +272,81 @@ export interface UpdateDictionaryRequest {
   status?: number;
 }
 
+// ==================== 站内信模块 ====================
+export interface MessageDto {
+  id: string;
+  senderId?: string;
+  senderName?: string;
+  receiverId: string;
+  receiverName: string;
+  title: string;
+  content: string;
+  messageType: string;
+  priority: string;
+  isRead: boolean;
+  readTime?: string;
+  isPushed: boolean;
+  createdAt: string;
+}
+
+export interface MessageQueryRequest {
+  pageNum: number;
+  pageSize: number;
+  onlyUnread?: boolean;
+  messageType?: string;
+  priority?: string;
+  keyword?: string;
+  senderName?: string;
+}
+
+export interface CreateMessageRequest {
+  receiverId: string;
+  receiverName: string;
+  title: string;
+  content: string;
+  messageType?: string;
+  priority?: string;
+}
+
+export interface BatchSendMessageRequest {
+  receiverIds: string[];
+  title: string;
+  content: string;
+  priority?: string;
+}
+
+export interface MessageStatisticsDto {
+  totalCount: number;
+  unreadCount: number;
+  systemMessageCount: number;
+  userMessageCount: number;
+}
+
+export interface UpdateMessageRequest {
+  title: string;
+  content: string;
+  priority?: string;
+}
+
+export interface PushMessageRequest {
+  title: string;
+  content: string;
+  priority?: string;
+}
+
+export interface PushMessageToRoleRequest {
+  roleIds: string[];
+  title: string;
+  content: string;
+  priority?: string;
+}
+
+export interface PushExistingMessageRequest {
+  pushType: 'all' | 'role' | 'user';
+  roleIds?: string[];
+  userIds?: string[];
+}
+
 // 分页响应接口
 export interface PagedResult<T> {
   list: T[];
@@ -383,6 +458,25 @@ export interface ApiConfig {
     EnableDictionaryAsync: string;
     DisableDictionaryAsync: string;
   };
+  Message: {
+    GetMessagesAsync: string;
+    GetMessageByIdAsync: string;
+    SendMessageAsync: string;
+    SendSystemMessageAsync: string;
+    BatchSendSystemMessageAsync: string;
+    MarkAsReadAsync: string;
+    MarkAsUnreadAsync: string;
+    BatchMarkAsReadAsync: string;
+    MarkAllAsReadAsync: string;
+    DeleteMessageAsync: string;
+    BatchDeleteMessagesAsync: string;
+    GetStatisticsAsync: string;
+    GetUnreadCountAsync: string;
+    UpdateMessageAsync: string;
+    PushMessageToAllAsync: string;
+    PushMessageToRoleAsync: string;
+    PushExistingMessageAsync: string;
+  };
 }
 
 // ==================== API 配置对象 ====================
@@ -481,11 +575,31 @@ const api: ApiConfig = {
     GetDictionaryByIdAsync: 'api/Dictionary/GetDictionaryByIdAsync',
     GetDictionaryByCodeAsync: 'api/Dictionary/GetDictionaryByCodeAsync',
     GetDictionariesByTypeAsync: 'api/Dictionary/GetDictionariesByTypeAsync',
+    GetDictionariesByTypesAsync: 'api/Dictionary/GetDictionariesByTypesAsync',
     CreateDictionaryAsync: 'api/Dictionary/CreateDictionaryAsync',
     UpdateDictionaryAsync: 'api/Dictionary/UpdateDictionaryAsync',
     DeleteDictionaryAsync: 'api/Dictionary/DeleteDictionaryAsync',
     EnableDictionaryAsync: 'api/Dictionary/EnableDictionaryAsync',
     DisableDictionaryAsync: 'api/Dictionary/DisableDictionaryAsync',
+  },
+  Message: {
+    GetMessagesAsync: 'api/Message/GetMessagesAsync',
+    GetMessageByIdAsync: 'api/Message/GetMessageByIdAsync',
+    SendMessageAsync: 'api/Message/SendMessageAsync',
+    SendSystemMessageAsync: 'api/Message/SendSystemMessageAsync',
+    BatchSendSystemMessageAsync: 'api/Message/BatchSendSystemMessageAsync',
+    MarkAsReadAsync: 'api/Message/MarkAsReadAsync',
+    MarkAsUnreadAsync: 'api/Message/MarkAsUnreadAsync',
+    BatchMarkAsReadAsync: 'api/Message/BatchMarkAsReadAsync',
+    MarkAllAsReadAsync: 'api/Message/MarkAllAsReadAsync',
+    DeleteMessageAsync: 'api/Message/DeleteMessageAsync',
+    BatchDeleteMessagesAsync: 'api/Message/BatchDeleteMessagesAsync',
+    GetStatisticsAsync: 'api/Message/GetStatisticsAsync',
+    GetUnreadCountAsync: 'api/Message/GetUnreadCountAsync',
+    UpdateMessageAsync: 'api/Message/UpdateMessageAsync',
+    PushMessageToAllAsync: 'api/Message/PushMessageToAllAsync',
+    PushMessageToRoleAsync: 'api/Message/PushMessageToRoleAsync',
+    PushExistingMessageAsync: 'api/Message/PushExistingMessageAsync',
   },
 };
 

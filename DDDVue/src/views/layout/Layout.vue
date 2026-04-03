@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import { ref, watch, onMounted, onUnmounted, markRaw, provide } from 'vue'
 import { RouterLink, useRouter } from 'vue-router'
-import { User, Fold, Expand, Collection, Menu, Setting } from '@element-plus/icons-vue'
+import { User, Fold, Expand, Collection, Menu, Setting, Bell } from '@element-plus/icons-vue'
 import * as menuApi from '@/api/menu'
+import * as messageApi from '@/api/message'
 import * as Icons from '@element-plus/icons-vue'
 import { getItem, setItem, clearAllCache, StorageKeys, getSystemName } from '@/utils/storage'
-import { showSuccessNotification, showErrorNotification } from '@/utils/notification'
+import { showSuccessNotification, showInfoNotification, showErrorNotification } from '@/utils/notification'
 
 // 菜单数据
 interface MenuItem {
@@ -31,6 +32,9 @@ const isMobileMenuVisible = ref(false)
 const userInfo = ref<UserInfo>({})
 const isMenuLoaded = ref(false)
 const systemName = ref(getSystemName())
+const unreadMessageCount = ref(0)
+let messagePollingTimer: number | null = null
+let lastUnreadCount = 0
 
 // 提供系统名称给子组件，允许子组件更新
 provide('systemName', systemName)
@@ -41,11 +45,6 @@ const getUserInfo = () => {
   if (storedInfo) {
     userInfo.value = storedInfo
   }
-}
-
-// 从 localStorage 获取菜单数据
-const getMenuFromStorage = (): MenuItem[] | null => {
-  return getItem<MenuItem[]>(StorageKeys.SidebarMenu)
 }
 
 // 将菜单数据保存到 localStorage
@@ -142,6 +141,54 @@ const handleDropdownCommand = (command: string) => {
   }
 }
 
+// 加载未读消息数量
+const loadUnreadMessageCount = async () => {
+  try {
+    const response = await messageApi.getUnreadCount()
+    if (response.data !== undefined) {
+      const newCount = response.data as number
+      // 检测是否有新消息（数量增加）
+      if (newCount > lastUnreadCount && newCount > 0) {
+        showInfoNotification({
+          title: '新消息提醒',
+          message: `您有 ${newCount} 条未读消息，请及时查看`,
+          duration: 5000
+        })
+      }
+      unreadMessageCount.value = newCount
+      lastUnreadCount = newCount
+    }
+  } catch (error) {
+    console.error('加载未读消息数量失败:', error)
+  }
+}
+
+// 跳转到阅读消息页面
+const goToMessages = async () => {
+  // 在当前 layout 的内容区域打开消息中心页面
+  router.push({ path: '/read-msg' })
+  // 点击后重置未读数量显示
+  unreadMessageCount.value = 0
+}
+
+// 开始轮询未读消息数量（每 30 秒）
+const startMessagePolling = () => {
+  // 立即执行一次
+  loadUnreadMessageCount()
+  // 定时轮询
+  messagePollingTimer = window.setInterval(() => {
+    loadUnreadMessageCount()
+  }, 30000)
+}
+
+// 停止轮询
+const stopMessagePolling = () => {
+  if (messagePollingTimer) {
+    clearInterval(messagePollingTimer)
+    messagePollingTimer = null
+  }
+}
+
 
 
 // 响应式检测
@@ -166,6 +213,7 @@ onMounted(() => {
   checkMobile()
   getUserInfo()
   loadMenuTree() // 从后端 API 获取菜单数据
+  startMessagePolling() // 开始轮询未读消息数量
   window.addEventListener('resize', checkMobile)
   window.addEventListener('storage', handleStorageChange)
 })
@@ -173,6 +221,7 @@ onMounted(() => {
 onUnmounted(() => {
   window.removeEventListener('resize', checkMobile)
   window.removeEventListener('storage', handleStorageChange)
+  stopMessagePolling() // 停止轮询
 })
 
 // 监听路由变化，关闭移动端菜单
@@ -198,6 +247,14 @@ watch(
         <h1 class="logo" :class="{ 'hidden': isMobile }">{{ systemName }}</h1>
       </div>
       <div class="header-right">
+        <!-- 站内信按钮 -->
+        <el-badge :value="unreadMessageCount" :hidden="unreadMessageCount === 0" class="message-badge">
+          <el-button text @click="goToMessages" class="message-btn">
+            <el-icon :size="20">
+              <Bell />
+            </el-icon>
+          </el-button>
+        </el-badge>
         <el-dropdown trigger="hover" @command="handleDropdownCommand">
           <div class="user-info">
             <el-icon :size="20">
@@ -317,6 +374,23 @@ watch(
 .header-right {
   display: flex;
   align-items: center;
+  gap: 12px;
+}
+
+.message-badge {
+  display: flex;
+  align-items: center;
+}
+
+.message-btn {
+  position: relative;
+  padding: 8px;
+  border-radius: 8px;
+  transition: background 0.3s;
+}
+
+.message-btn:hover {
+  background: #f5f7fa;
 }
 
 .user-info {

@@ -29,6 +29,11 @@ public interface IDictionaryService : IApplicationService
     Task<ApiRequestResult> GetDictionariesByTypeAsync(string type);
 
     /// <summary>
+    /// 批量根据类型获取字典列表
+    /// </summary>
+    Task<ApiRequestResult> GetDictionariesByTypesAsync(List<string> types);
+
+    /// <summary>
     /// 创建字典
     /// </summary>
     Task<ApiRequestResult> CreateDictionaryAsync(CreateDictionaryRequest request);

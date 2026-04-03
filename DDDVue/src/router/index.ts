@@ -43,6 +43,11 @@ const createDynamicRouter = async () => {
             name: 'clear-cache',
             component: ClearCache
           },
+          {
+            path: 'read-msg',
+            name: 'read-msg',
+            component: () => import('../views/home/Messages/Read.vue')
+          },
           // 通配符路由，必须放在最后
           {
             path: '/:pathMatch(.*)*',

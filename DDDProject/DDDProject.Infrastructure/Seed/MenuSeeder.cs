@@ -67,13 +67,65 @@ public static class MenuSeeder
         var userMenu = Menu.Create(
             name: "用户管理",
             path: "users",
-            component: "", // 有子菜单，不需要组件
+            component: "Users", // 有子菜单，不需要组件
             icon: "User",
             parentId: null,
             sortOrder: 2,
             status: 1
         );
         menus.Add(userMenu);
+
+        // 4. 产品管理
+        var productMenu = Menu.Create(
+            name: "产品管理",
+            path: "products",
+            component: "Products",
+            icon: "Goods",
+            parentId: null,
+            sortOrder: 4,
+            status: 1
+        );
+        menus.Add(productMenu);
+
+        // 5. 系统设置
+        var settingsMenu = Menu.Create(
+            name: "系统设置",
+            path: "settings",
+            component: "Settings", // 有子菜单，不需要组件
+            icon: "Setting",
+            parentId: null,
+            sortOrder: 5,
+            status: 1
+        );
+        menus.Add(settingsMenu);
+
+
+
+        // 1. 日志（仪表盘）
+        var logMenu = Menu.Create(
+            name: "日志管理",
+            path: "logs",
+            component: "LogV", // 有子菜单，不需要组件
+            icon: "HomeFilled",
+            parentId: null,
+            sortOrder: 6,
+            status: 1
+        );
+        menus.Add(logMenu);
+
+        // 7. 站内信
+        var msgMenu = Menu.Create(
+            name: "站内信",
+            path: "messages",
+            component: "Messages/Messages",
+            icon: "Bell",
+            parentId: null,
+            sortOrder: 7,
+            status: 1
+        );
+        menus.Add(msgMenu);
+
+        // ==================== 二级菜单 ====================
 
         // 3. 角色管理
         var roleMenu = Menu.Create(
@@ -97,47 +149,6 @@ public static class MenuSeeder
             status: 1
         );
         menus.Add(infoMenu);
-        // 4. 产品管理
-        var productMenu = Menu.Create(
-            name: "产品管理",
-            path: "products",
-            component: "Products/Products",
-            icon: "Goods",
-            parentId: null,
-            sortOrder: 4,
-            status: 1
-        );
-        menus.Add(productMenu);
-
-        // 5. 系统设置
-        var settingsMenu = Menu.Create(
-            name: "系统设置",
-            path: "settings",
-            component: "", // 有子菜单，不需要组件
-            icon: "Setting",
-            parentId: null,
-            sortOrder: 5,
-            status: 1
-        );
-        menus.Add(settingsMenu);
-
-
-
-        // 1. 日志（仪表盘）
-        var logMenu = Menu.Create(
-            name: "日志管理",
-            path: "logs",
-            component: "", // 有子菜单，不需要组件
-            icon: "HomeFilled",
-            parentId: null,
-            sortOrder: 6,
-            status: 1
-        );
-        menus.Add(logMenu);
-
-
-        // ==================== 二级菜单 ====================
-
         // 系统设置 -> 菜单管理
         var menuManagementMenu = Menu.Create(
             name: "菜单管理",

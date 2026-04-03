@@ -72,6 +72,11 @@ public class ApplicationDbContext : DbContext
     /// </summary>
     public DbSet<Dictionary> Dictionaries => Set<Dictionary>();
 
+    /// <summary>
+    /// 站内信集合
+    /// </summary>
+    public DbSet<Message> Messages => Set<Message>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -116,5 +121,8 @@ public class ApplicationDbContext : DbContext
 
         // 配置字典实体
         modelBuilder.ApplyConfiguration(new DictionaryConfiguration());
+
+        // 配置站内信实体
+        modelBuilder.ApplyConfiguration(new MessageConfiguration());
     }
 }

@@ -5,34 +5,16 @@
         <template #header>
           <div class="card-header">
             <div class="filter-area">
-              <el-select v-model="filterParams.operationType" placeholder="操作类型" clearable style="width: 100px">
-                <el-option label="创建" value="Create" />
-                <el-option label="更新" value="Update" />
-                <el-option label="删除" value="Delete" />
-                <el-option label="导出" value="Export" />
-                <el-option label="导入" value="Import" />
-                <el-option label="启用" value="Enable" />
-                <el-option label="禁用" value="Disable" />
-                <el-option label="登录" value="Login" />
-                <el-option label="登出" value="Logout" />
-                <el-option label="分配" value="Assign" />
-                <el-option label="其他" value="Other" />
+              <el-select v-model="filterParams.operationType" placeholder="操作类型" clearable class="filter-select" @change="handleFilterChange">
+                <el-option v-for="item in operationTypeOptions" :key="item.value" :label="item.label" :value="item.value" />
               </el-select>
-              <el-select v-model="filterParams.module" placeholder="操作模块" clearable style="width: 100px">
-                <el-option label="用户" value="User" />
-                <el-option label="角色" value="Role" />
-                <el-option label="菜单" value="Menu" />
-                <el-option label="权限" value="Permission" />
-                <el-option label="设置" value="Setting" />
-                <el-option label="日志" value="Log" />
-                <el-option label="缓存" value="Cache" />
-                <el-option label="其他" value="Other" />
+              <el-select v-model="filterParams.module" placeholder="操作模块" clearable class="filter-select" @change="handleFilterChange">
+                <el-option v-for="item in moduleOptions" :key="item.value" :label="item.label" :value="item.value" />
               </el-select>
-              <el-select v-model="filterParams.status" placeholder="状态" clearable style="width: 80px">
-                <el-option label="成功" value="Success" />
-                <el-option label="失败" value="Failure" />
+              <el-select v-model="filterParams.status" placeholder="状态" clearable class="filter-select-sm" @change="handleFilterChange">
+                <el-option v-for="item in statusOptions" :key="item.value" :label="item.label" :value="item.value" />
               </el-select>
-              <el-input v-model="filterParams.userName" placeholder="用户名" clearable style="width: 120px" />
+              <el-input v-model="filterParams.userName" placeholder="用户名" clearable class="filter-input" @clear="handleFilterChange" @keyup.enter="handleFilterChange" />
               <el-date-picker
                 v-model="filterParams.timeRange"
                 type="daterange"
@@ -40,9 +22,9 @@
                 start-placeholder="开始"
                 end-placeholder="结束"
                 value-format="YYYY-MM-DD"
-                style="width: 220px"
+                class="filter-date"
+                @change="handleFilterChange"
               />
-              <el-button type="primary" @click="handleSearch">查询</el-button>
               <el-button @click="handleReset">重置</el-button>
               <el-divider direction="vertical" />
               <el-button v-if="hasBtn('log:export')" type="success" @click="handleExport">导出</el-button>
@@ -96,7 +78,7 @@
           <el-table-column prop="status" label="状态" width="80">
             <template #default="{ row }">
               <el-tag :type="row.status === 'Success' ? 'success' : 'danger'" effect="dark">
-                {{ row.status === 'Success' ? '成功' : '失败' }}
+                {{ getStatusLabel(row.status) }}
               </el-tag>
             </template>
           </el-table-column>
@@ -145,7 +127,7 @@
         <el-descriptions-item label="IP地址">{{ currentLog?.ipAddress || '-' }}</el-descriptions-item>
         <el-descriptions-item label="执行状态">
           <el-tag :type="currentLog?.status === 'Success' ? 'success' : 'danger'" effect="dark">
-            {{ currentLog?.status === 'Success' ? '成功' : '失败' }}
+            {{ getStatusLabel(currentLog?.status) }}
           </el-tag>
         </el-descriptions-item>
         <el-descriptions-item label="执行耗时">{{ currentLog?.duration }} ms</el-descriptions-item>
@@ -211,12 +193,13 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessageBox } from 'element-plus'
 import * as logApi from '@/api/log'
 import type { OperationLogDto, OperationLogQueryRequest, ClearLogsRequest } from '@/api/index'
 import { showSuccessNotification, showErrorNotification } from '@/utils/notification'
 import { useButtons } from '@/utils/buttons'
+import { useDictionaries, DICT_TYPES } from '@/utils/dictionary'
 
 // 解构导入 API 函数
 const {
@@ -229,6 +212,27 @@ const {
 
 // 按钮管理
 const { hasBtn } = useButtons('logs')
+
+// 字典数据 - 批量获取
+const {
+  dictDataMap,
+  loadDicts,
+  getLabelByValue
+} = useDictionaries([
+  DICT_TYPES.LOG_OPERATION_TYPE,
+  DICT_TYPES.LOG_MODULE,
+  DICT_TYPES.LOG_STATUS
+])
+
+// 字典选项 - 使用 computed 响应式获取
+const operationTypeOptions = computed(() => dictDataMap.value[DICT_TYPES.LOG_OPERATION_TYPE] || [])
+const moduleOptions = computed(() => dictDataMap.value[DICT_TYPES.LOG_MODULE] || [])
+const statusOptions = computed(() => dictDataMap.value[DICT_TYPES.LOG_STATUS] || [])
+
+// 字典标签获取方法
+const getOperationTypeLabel = (value?: string | number) => getLabelByValue(DICT_TYPES.LOG_OPERATION_TYPE, value || '')
+const getModuleLabel = (value?: string | number) => getLabelByValue(DICT_TYPES.LOG_MODULE, value || '')
+const getStatusLabel = (value?: string | number) => getLabelByValue(DICT_TYPES.LOG_STATUS, value || '')
 
 // 分页数据
 interface Pagination {
@@ -317,39 +321,6 @@ const getOperationTypeTag = (type: string) => {
   return tagMap[type] || ''
 }
 
-// 操作类型中文标签
-const getOperationTypeLabel = (type?: string) => {
-  const labelMap: Record<string, string> = {
-    Create: '创建',
-    Update: '更新',
-    Delete: '删除',
-    Export: '导出',
-    Import: '导入',
-    Enable: '启用',
-    Disable: '禁用',
-    Login: '登录',
-    Logout: '登出',
-    Assign: '分配',
-    Other: '其他'
-  }
-  return labelMap[type || ''] || type || '-'
-}
-
-// 模块中文标签
-const getModuleLabel = (module?: string) => {
-  const labelMap: Record<string, string> = {
-    User: '用户',
-    Role: '角色',
-    Menu: '菜单',
-    Permission: '权限',
-    Setting: '设置',
-    Log: '日志',
-    Cache: '缓存',
-    Other: '其他'
-  }
-  return labelMap[module || ''] || module || '-'
-}
-
 // 请求方法标签颜色
 const getMethodTag = (method: string) => {
   const tagMap: Record<string, string> = {
@@ -386,8 +357,8 @@ const loadLogData = async () => {
   }
 }
 
-// 查询
-const handleSearch = () => {
+// 筛选条件变化时自动刷新
+const handleFilterChange = () => {
   pagination.value.pageNum = 1
   loadLogData()
 }
@@ -526,8 +497,11 @@ const handleCurrentChange = (page: number) => {
   loadLogData()
 }
 
-onMounted(() => {
-  loadLogData()
+onMounted(async () => {
+  // 批量加载字典数据
+  await loadDicts()
+  // 加载日志数据
+  await loadLogData()
 })
 </script>
 
@@ -559,6 +533,23 @@ onMounted(() => {
   gap: 12px;
   align-items: center;
   flex-wrap: wrap;
+}
+
+/* 筛选组件样式 */
+.filter-select {
+  width: 120px;
+}
+
+.filter-select-sm {
+  width: 90px;
+}
+
+.filter-input {
+  width: 120px;
+}
+
+.filter-date {
+  width: 240px;
 }
 
 .table-actions {

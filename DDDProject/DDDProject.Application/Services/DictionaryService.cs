@@ -169,6 +169,43 @@ public class DictionaryService : IDictionaryService
     }
 
     /// <summary>
+    /// 批量根据类型获取字典列表
+    /// </summary>
+    public async Task<ApiRequestResult> GetDictionariesByTypesAsync(List<string> types)
+    {
+        if (types is null || types.Count == 0)
+        {
+            return new ApiRequestResult { Success = true, Message = "操作成功", Data = new Dictionary<string, List<DictionaryDto>>() };
+        }
+
+        var dictionaries = await _repository.GetListAsync(d => types.Contains(d.Type) && d.Status == 1);
+        var dictionaryList = dictionaries.ToList();
+
+        // 按类型分组
+        var groupedResult = dictionaryList
+            .GroupBy(d => d.Type)
+            .ToDictionary(
+                g => g.Key,
+                g => g.OrderBy(d => d.SortOrder).Select(d => new DictionaryDto
+                {
+                    Id = d.Id,
+                    Code = d.Code,
+                    Name = d.Name,
+                    Value = d.Value,
+                    Type = d.Type,
+                    Status = d.Status,
+                    SortOrder = d.SortOrder,
+                    Description = d.Description,
+                    Remark = d.Remark,
+                    CreatedAt = d.CreatedAt,
+                    UpdatedAt = d.UpdatedAt
+                }).ToList()
+            );
+
+        return new ApiRequestResult { Success = true, Message = "操作成功", Data = groupedResult };
+    }
+
+    /// <summary>
     /// 创建字典
     /// </summary>
     public async Task<ApiRequestResult> CreateDictionaryAsync(CreateDictionaryRequest request)

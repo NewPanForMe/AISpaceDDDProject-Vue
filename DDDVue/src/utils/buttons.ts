@@ -65,6 +65,14 @@ const BUTTON_PERMISSION_MAP: Record<string, string> = {
   'dictionary:delete': 'dictionary:delete',
   'dictionary:enable': 'dictionary:enable',
   'dictionary:disable': 'dictionary:disable',
+
+  // 站内信管理
+  'message:add': 'message:add',
+  'message:edit': 'message:edit',
+  'message:delete': 'message:delete',
+  'message:send': 'message:send',
+  'message:system': 'message:system',
+  'message:push': 'message:push',
 }
 
 /**

@@ -22,6 +22,11 @@ export const getDictionariesByType = (type: string) => {
   return http.get<DictionaryDto[]>(api.Dictionary.GetDictionariesByTypeAsync, { params: { type } })
 }
 
+// 批量根据类型获取字典列表
+export const getDictionariesByTypes = (types: string[]) => {
+  return http.post<Record<string, DictionaryDto[]>>(api.Dictionary.GetDictionariesByTypesAsync, types)
+}
+
 // 创建字典
 export const createDictionary = (data: CreateDictionaryRequest) => {
   return http.post(api.Dictionary.CreateDictionaryAsync, data)

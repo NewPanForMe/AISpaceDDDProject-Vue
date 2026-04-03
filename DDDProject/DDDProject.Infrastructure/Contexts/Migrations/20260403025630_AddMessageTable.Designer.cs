@@ -4,6 +4,7 @@ using DDDProject.Infrastructure.Contexts;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace DDDProject.Infrastructure.Contexts.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260403025630_AddMessageTable")]
+    partial class AddMessageTable
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -185,11 +188,6 @@ namespace DDDProject.Infrastructure.Contexts.Migrations
                         .HasColumnType("bit")
                         .HasDefaultValue(false);
 
-                    b.Property<bool>("IsPushed")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bit")
-                        .HasDefaultValue(false);
-
                     b.Property<bool>("IsRead")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("bit")
@@ -208,9 +206,6 @@ namespace DDDProject.Infrastructure.Contexts.Migrations
                         .HasMaxLength(20)
                         .HasColumnType("nvarchar(20)")
                         .HasDefaultValue("Normal");
-
-                    b.Property<DateTime?>("PushedTime")
-                        .HasColumnType("datetime2");
 
                     b.Property<DateTime?>("ReadTime")
                         .HasColumnType("datetime2");
@@ -243,8 +238,6 @@ namespace DDDProject.Infrastructure.Contexts.Migrations
                     b.HasIndex("CreatedAt");
 
                     b.HasIndex("IsDeleted");
-
-                    b.HasIndex("IsPushed");
 
                     b.HasIndex("IsRead");
 

@@ -15,6 +15,19 @@
   </thead>
   <tbody>
     <tr>
+      <td rowspan="4">2026-04-03</td>
+      <td>新增字典数据使用规范（5.3.4），页面下拉选项必须通过字典接口获取</td>
+    </tr>
+    <tr>
+      <td>新增日志相关字典类型：<code>log_operation_type</code>、<code>log_module</code>、<code>log_status</code></td>
+    </tr>
+    <tr>
+      <td>修改日志查询页面，操作类型、操作模块、状态下拉框改为字典接口获取</td>
+    </tr>
+    <tr>
+      <td>修复菜单编辑失败问题，完善 PascalCase 到 camelCase 的属性名转换</td>
+    </tr>
+    <tr>
       <td rowspan="5">2026-04-02</td>
       <td>新增操作日志模块（OperationLog），自动记录控制器中的增删改导出等操作</td>
     </tr>
@@ -1018,7 +1031,118 @@ const toggleStatus = async (row: Item) => {
 - 所有数据变更操作（增删改、状态变更）后都必须调用 `loadData()` 刷新缓存
 - 确保用户看到的数据始终是最新的
 
-#### 5.3.4 按钮权限设计规范
+#### 5.3.4 字典数据使用规范
+
+**核心原则：页面上的下拉选项数据必须通过字典接口获取，禁止硬编码**
+
+**设计思路：**
+
+1. 所有可复用的下拉选项（如状态、类型、模块等）都应记录在字典表中
+2. 页面通过字典类型（type）从接口获取对应的选项列表
+3. 字典数据支持缓存，减少重复请求
+
+**字典数据结构：**
+
+```typescript
+interface DictItem {
+  label: string        // 显示文本（对应字典的 name）
+  value: string | number  // 实际值（对应字典的 value）
+  code?: string        // 字典编码
+  sortOrder?: number   // 排序
+}
+```
+
+**预定义字典类型（`DICT_TYPES`）：**
+
+| 字典类型 | 说明 | 示例值 |
+|----------|------|--------|
+| `status` | 通用状态 | 启用(1)、禁用(0) |
+| `gender` | 性别 | 男(1)、女(2)、其他(0) |
+| `user_type` | 用户类型 | 管理员(admin)、普通用户(user)、访客(guest) |
+| `menu_type` | 菜单类型 | 目录(directory)、菜单(menu)、按钮(button) |
+| `permission_type` | 权限类型 | API权限(api)、菜单权限(menu)、按钮权限(button) |
+| `log_operation_type` | 操作日志-操作类型 | Create、Update、Delete、Export、Import 等 |
+| `log_module` | 操作日志-操作模块 | User、Role、Menu、Permission、Setting 等 |
+| `log_status` | 操作日志-状态 | Success、Failure |
+
+**使用方法：**
+
+```typescript
+import { useDictionary, DICT_TYPES } from '@/utils/dictionary'
+
+// 获取字典数据
+const { dictData: statusOptions, loadDict: loadStatusDict, getLabelByValue: getStatusLabel } = useDictionary(DICT_TYPES.STATUS)
+
+// 在 onMounted 中加载
+onMounted(() => {
+  loadStatusDict()
+})
+```
+
+**模板中使用：**
+
+```vue
+<template>
+  <!-- 下拉框使用字典数据 -->
+  <el-select v-model="filterParams.status" placeholder="状态" clearable>
+    <el-option 
+      v-for="item in statusOptions" 
+      :key="item.value" 
+      :label="item.label" 
+      :value="item.value" 
+    />
+  </el-select>
+
+  <!-- 表格中显示字典标签 -->
+  <el-table-column prop="status" label="状态">
+    <template #default="{ row }">
+      {{ getStatusLabel(row.status) }}
+    </template>
+  </el-table-column>
+</template>
+```
+
+**新增字典类型步骤：**
+
+1. **后端**：在 `DictionarySeeder.cs` 中添加种子数据
+2. **前端**：在 `dictionary.ts` 的 `DICT_TYPES` 中添加类型常量
+3. **页面**：使用 `useDictionary` 获取并使用字典数据
+
+**后端种子数据示例：**
+
+```csharp
+// DictionarySeeder.cs
+Dictionary.Create("log_operation_type_create", "创建", "Create", "log_operation_type", 1, "创建操作"),
+Dictionary.Create("log_operation_type_update", "更新", "Update", "log_operation_type", 2, "更新操作"),
+// ...
+```
+
+**前端类型常量示例：**
+
+```typescript
+// dictionary.ts
+export const DICT_TYPES = {
+  // ... 其他类型
+  LOG_OPERATION_TYPE: 'log_operation_type',  // 操作类型
+  LOG_MODULE: 'log_module',                  // 操作模块
+  LOG_STATUS: 'log_status'                   // 日志状态
+}
+```
+
+**API 接口：**
+
+| 接口 | 说明 |
+|------|------|
+| `GET /api/Dictionary/GetDictionariesByTypeAsync?type=xxx` | 根据类型获取字典列表 |
+
+**注意事项：**
+
+- 字典数据会被缓存 30 分钟，存储在 `localStorage` 中，键名格式：`dict_类型`
+- 新增字典类型后，需要清除缓存或等待缓存过期才能看到新数据
+- 字典的 `value` 值应与后端实体/枚举值保持一致
+- 禁用状态的字典项不会返回给前端
+
+#### 5.3.5 按钮权限设计规范
 
 **核心原则：页面按钮的显示/隐藏由按钮数据决定，而非权限编码**
 

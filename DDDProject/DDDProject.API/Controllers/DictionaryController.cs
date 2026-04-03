@@ -79,6 +79,17 @@ public class DictionaryController : BaseApiController
     }
 
     /// <summary>
+    /// 批量根据类型获取字典列表
+    /// </summary>
+    [HttpPost]
+    [ActionName("GetDictionariesByTypesAsync")]
+    [ApiSearch(Name = "批量根据类型获取字典", Description = "根据多个类型批量获取字典列表，返回按类型分组的字典数据", Category = ApiSearchCategory.Dictionary)]
+    public async Task<ApiRequestResult> GetDictionariesByTypesAsync([FromBody] List<string> types)
+    {
+        return await _dictionaryService.GetDictionariesByTypesAsync(types);
+    }
+
+    /// <summary>
     /// 创建字典
     /// </summary>
     [HttpPost]

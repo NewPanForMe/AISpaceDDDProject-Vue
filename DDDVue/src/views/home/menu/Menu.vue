@@ -111,6 +111,9 @@ import { removeItem, setItem, getItem, StorageKeys } from '@/utils/storage'
 import { showSuccessNotification, showErrorNotification } from '@/utils/notification'
 import { useButtons } from '@/utils/buttons'
 
+// 刷新后通知的 sessionStorage key
+const REFRESH_NOTIFICATION_KEY = 'menu_refresh_notification'
+
 // 解构导入 API 函数
 const { getPagedMenuTree, addMenu: addMenuApi, updateMenu: updateMenuApi, deleteMenu: deleteMenuApi } = menuApi
 
@@ -262,9 +265,14 @@ const deleteMenu = async (id: number) => {
     // 调用API删除菜单
     await deleteMenuApi(id.toString())
     clearMenuCache() // 清空菜单缓存
-    await loadMenuData(true) // 强制重新获取数据
+
+    // 存储通知信息，刷新后显示
+    sessionStorage.setItem(REFRESH_NOTIFICATION_KEY, JSON.stringify({
+      title: '成功',
+      message: '删除成功'
+    }))
+
     await refreshSidebarMenu() // 刷新侧边栏菜单
-    showSuccessNotification({ title: '成功', message: '删除成功' })
   } catch (error) {
     console.log('取消删除或删除失败')
   }
@@ -288,21 +296,29 @@ const submitMenuForm = async () => {
   try {
     await menuFormRef.value.validate()
 
+    let notificationMessage = ''
+
     if (dialogTitle.value === '添加菜单' || dialogTitle.value === '添加子菜单') {
       // 调用API添加菜单
       await addMenuApi(menuForm.value)
-      showSuccessNotification({ title: '成功', message: '添加成功' })
+      notificationMessage = '添加成功'
     } else {
       // 调用API更新菜单
       if (menuForm.value.id) {
         await updateMenuApi(menuForm.value.id.toString(), menuForm.value)
-        showSuccessNotification({ title: '成功', message: '编辑成功' })
+        notificationMessage = '编辑成功'
       }
     }
 
     dialogVisible.value = false
     clearMenuCache() // 清空菜单缓存
-    await loadMenuData(true) // 强制重新获取数据
+
+    // 存储通知信息，刷新后显示
+    sessionStorage.setItem(REFRESH_NOTIFICATION_KEY, JSON.stringify({
+      title: '成功',
+      message: notificationMessage
+    }))
+
     await refreshSidebarMenu() // 刷新侧边栏菜单
   } catch (error) {
     console.log('验证失败或保存失败')
@@ -331,8 +347,23 @@ const handleCurrentChange = (page: number) => {
   loadMenuData()
 }
 
+// 检查并显示刷新后的通知
+const checkAndShowRefreshNotification = () => {
+  const notificationData = sessionStorage.getItem(REFRESH_NOTIFICATION_KEY)
+  if (notificationData) {
+    try {
+      const { title, message } = JSON.parse(notificationData)
+      showSuccessNotification({ title, message })
+      sessionStorage.removeItem(REFRESH_NOTIFICATION_KEY)
+    } catch (e) {
+      console.error('解析通知数据失败:', e)
+    }
+  }
+}
+
 onMounted(() => {
   loadMenuData()
+  checkAndShowRefreshNotification()
 })
 </script>
 
