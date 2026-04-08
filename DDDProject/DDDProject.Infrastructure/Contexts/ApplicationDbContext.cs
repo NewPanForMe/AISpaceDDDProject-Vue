@@ -17,6 +17,17 @@ public class ApplicationDbContext : DbContext
     {
     }
 
+    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+    {
+        if (!optionsBuilder.IsConfigured)
+        {
+            // 用于 EF Core 工具设计时配置
+            optionsBuilder.UseSqlServer(
+                "Server=.;Database=DDDProject;Trusted_Connection=True;TrustServerCertificate=True;",
+                b => b.MigrationsAssembly("DDDProject.Infrastructure"));
+        }
+    }
+
     /// <summary>
     /// 仓储集合
     /// </summary>
@@ -77,6 +88,11 @@ public class ApplicationDbContext : DbContext
     /// </summary>
     public DbSet<Message> Messages => Set<Message>();
 
+    /// <summary>
+    /// 消息接收者集合
+    /// </summary>
+    public DbSet<MessageRecipient> MessageRecipients => Set<MessageRecipient>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -124,5 +140,8 @@ public class ApplicationDbContext : DbContext
 
         // 配置站内信实体
         modelBuilder.ApplyConfiguration(new MessageConfiguration());
+
+        // 配置消息接收者实体
+        modelBuilder.ApplyConfiguration(new MessageRecipientConfiguration());
     }
 }

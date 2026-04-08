@@ -2,120 +2,6 @@
 
 本项目采用 DDD（Domain-Driven Design）分层架构设计，包含后端 API（DDDProject）和前端 Vue（DDDVue）两个子项目。
 
-## 文档更新日志
-
-文档做更新时，应该在此留下记录。
-
-<table>
-  <thead>
-    <tr>
-      <th>日期</th>
-      <th>更新内容</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td rowspan="4">2026-04-03</td>
-      <td>新增字典数据使用规范（5.3.4），页面下拉选项必须通过字典接口获取</td>
-    </tr>
-    <tr>
-      <td>新增日志相关字典类型：<code>log_operation_type</code>、<code>log_module</code>、<code>log_status</code></td>
-    </tr>
-    <tr>
-      <td>修改日志查询页面，操作类型、操作模块、状态下拉框改为字典接口获取</td>
-    </tr>
-    <tr>
-      <td>修复菜单编辑失败问题，完善 PascalCase 到 camelCase 的属性名转换</td>
-    </tr>
-    <tr>
-      <td rowspan="5">2026-04-02</td>
-      <td>新增操作日志模块（OperationLog），自动记录控制器中的增删改导出等操作</td>
-    </tr>
-    <tr>
-      <td>新增 <code>OperationLogFilter</code> 过滤器，自动捕获 API 操作并记录日志</td>
-    </tr>
-    <tr>
-      <td>新增日志查询、删除、清空、统计、导出等 API 接口</td>
-    </tr>
-    <tr>
-      <td>日志记录包含：操作用户、操作类型、操作模块、请求参数、响应结果、IP地址、执行耗时、浏览器信息等</td>
-    </tr>
-    <tr>
-      <td>添加日志模块权限编码：<code>log:delete</code>、<code>log:clear</code>、<code>log:export</code></td>
-    </tr>
-    <tr>
-      <td rowspan="7">2026-04-01</td>
-      <td>新增自定义权限注解 <code>[Permission]</code>，支持方法级别的权限控制</td>
-    </tr>
-    <tr>
-      <td>为所有控制器的数据变更方法添加 <code>[Permission]</code> 注解</td>
-    </tr>
-    <tr>
-      <td>将权限注解规范记录到 README.md 开发守则</td>
-    </tr>
-    <tr>
-      <td rowspan="6">2026-03-31</td>
-      <td>新增按钮管理模块（Button），支持页面按钮的统一管理</td>
-    </tr>
-    <tr>
-      <td>新增按钮权限设计规范，页面按钮显示由按钮数据决定</td>
-    </tr>
-    <tr>
-      <td>修改分配权限页面，数据来源改为按钮信息，按菜单分组显示</td>
-    </tr>
-    <tr>
-      <td>修改所有列表页按钮，使用 `hasBtn()` 替代 `hasPermission()` 进行权限控制</td>
-    </tr>
-    <tr>
-      <td>新增 `useButtons` 组合式函数，简化按钮权限管理</td>
-    </tr>
-    <tr>
-      <td>新增按钮种子数据生成器，根据菜单自动生成按钮</td>
-    </tr>
-    <tr>
-      <td rowspan="10">2026-03-26</td>
-      <td>新增权限管理模块（Permission），支持按钮级别的权限控制</td>
-    </tr>
-    <tr>
-      <td>JWT 配置从配置文件改为从数据库 Settings 表获取，支持动态配置</td>
-    </tr>
-    <tr>
-      <td>前端列表页添加缓存功能，统一缓存键格式为 `list_模块名_页码_每页数量`</td>
-    </tr>
-    <tr>
-      <td>登录时检查用户角色状态，禁用角色禁止登录并给出提示</td>
-    </tr>
-    <tr>
-      <td>用户列表添加重置密码按钮功能</td>
-    </tr>
-    <tr>
-      <td>新增缓存更新规则文档，规范操作后更新缓存的流程</td>
-    </tr>
-    <tr>
-      <td>修复登录时权限获取问题，从 PermissionDto[] 中正确提取权限编码</td>
-    </tr>
-    <tr>
-      <td>权限管理页面添加按钮权限控制，模块筛选改为动态获取</td>
-    </tr>
-    <tr>
-      <td>缓存管理页面表格添加操作列，支持单独删除各分类缓存</td>
-    </tr>
-    <tr>
-      <td>完善个人中心页面：基本信息展示、编辑资料、修改密码功能</td>
-    </tr>
-    <tr>
-      <td rowspan="3">2026-03-25</td>
-      <td>新增 MenuRole 模块（菜单角色关联），完善 Role 模块功能，添加数据库迁移</td>
-    </tr>
-    <tr>
-      <td>整理文档结构，将开发规范整合为统一章节，优化文档可读性</td>
-    </tr>
-    <tr>
-      <td>新增 Git 拉推原则（Pull-Push Principle）说明</td>
-    </tr>
-  </tbody>
-</table>
-
 ## 目录
 
 - [快速开始](#快速开始)
@@ -124,293 +10,14 @@
 - [开发规范](#开发规范)
   - [通用编码规范](#51-通用编码规范)
   - [后端开发规范](#52-后端开发规范)
-  - [权限注解规范](#524-权限注解规范)
   - [前端开发规范](#53-前端开发规范)
   - [安全规范](#54-安全规范)
   - [配置规范](#55-配置规范)
   - [Git 规范](#56-git-规范)
 - [完整示例](#完整示例添加新的-api-功能)
+- [实际开发清单](#实际开发清单新增一个模块时按什么顺序改)
 - [注意事项](#注意事项)
-- [开发日志](#开发日志)
-
----
-
-## 开发日志
-
-### 2026-04-02
-
-#### 新增功能
-
-| 模块 | 功能 | 说明 |
-|------|------|------|
-| OperationLog | 操作日志模块 | 新增操作日志实体、服务、控制器，支持日志的增删改查导出 |
-| OperationLog | 自动日志记录 | 通过 `OperationLogFilter` 过滤器自动记录控制器中的增删改导出等操作 |
-| OperationLog | 日志统计功能 | 支持按操作类型、操作模块统计日志数量 |
-| OperationLog | 日志清空功能 | 支持按时间范围清空日志 |
-
-#### 新增文件
-
-**Domain 层：**
-- `Entities/OperationLog.cs` - 操作日志实体和操作类型/模块常量
-
-**Application 层：**
-- `DTOs/OperationLogDTO.cs` - 操作日志 DTO 和查询请求类
-- `Interfaces/IOperationLogService.cs` - 操作日志服务接口
-- `Services/OperationLogService.cs` - 操作日志服务实现
-
-**Infrastructure 层：**
-- `Configuration/OperationLogConfiguration.cs` - 操作日志 EF Core 配置
-
-**API 层：**
-- `Filters/OperationLogFilter.cs` - 操作日志记录过滤器
-- `Controllers/OperationLogController.cs` - 操作日志控制器
-
-#### 数据库迁移
-
-| 迁移名称 | 说明 |
-|----------|------|
-| `AddOperationLogTable` | 创建操作日志表 |
-
-#### API 接口
-
-**OperationLogController：**
-- `GET /api/OperationLog/GetOperationLogsAsync` - 获取操作日志列表（分页、支持筛选）
-- `GET /api/OperationLog/GetOperationLogByIdAsync` - 获取操作日志详情
-- `DELETE /api/OperationLog/DeleteOperationLogAsync` - 删除操作日志
-- `DELETE /api/OperationLog/BatchDeleteOperationLogsAsync` - 批量删除操作日志
-- `DELETE /api/OperationLog/ClearOperationLogsAsync` - 清空指定时间范围的操作日志
-- `GET /api/OperationLog/GetOperationTypeStatisticsAsync` - 获取操作类型统计
-- `GET /api/OperationLog/GetModuleStatisticsAsync` - 获取操作模块统计
-- `GET /api/OperationLog/ExportOperationLogsAsync` - 导出操作日志
-
-#### 日志记录内容
-
-| 字段 | 说明 |
-|------|------|
-| UserId | 操作用户ID |
-| UserName | 操作用户名 |
-| RealName | 操作用户真实姓名 |
-| OperationType | 操作类型：Create, Update, Delete, Export, Import, Enable, Disable, Login, Logout, Assign, Other |
-| Module | 操作模块：User, Role, Menu, Permission, Setting, Log, Cache, Other |
-| Description | 操作描述（来自 `[ApiSearch]` 注解的 Name 属性） |
-| RequestMethod | 请求方法：GET, POST, PUT, DELETE |
-| RequestPath | 请求路径 |
-| RequestParams | 请求参数（JSON格式） |
-| ResponseResult | 响应结果（JSON格式） |
-| IpAddress | 客户端IP地址 |
-| Status | 执行状态：Success, Failure |
-| ErrorMessage | 错误信息（失败时记录） |
-| Duration | 执行耗时（毫秒） |
-| Browser | 浏览器信息 |
-| OsInfo | 操作系统信息 |
-
-#### 权限编码
-
-| 模块 | 权限编码 | 说明 |
-|------|----------|------|
-| Log | `log:delete` | 删除日志权限 |
-| Log | `log:clear` | 清空日志权限 |
-| Log | `log:export` | 导出日志权限 |
-
-#### 使用说明
-
-日志记录通过 `OperationLogFilter` 过滤器自动完成，无需手动调用。过滤器会自动记录以下操作：
-
-1. **POST 请求**：创建操作
-2. **PUT 请求**：更新操作
-3. **DELETE 请求**：删除操作
-4. **包含 Export 关键字的方法**：导出操作
-5. **包含 Login 关键字的方法**：登录操作
-
-**前提条件**：控制器方法必须添加 `[ApiSearch]` 注解，否则不会记录日志。
-
-```csharp
-[HttpPost]
-[ActionName("CreateUserAsync")]
-[Permission("user:add")]
-[ApiSearch(Name = "创建用户", Description = "创建新的用户", Category = ApiSearchCategory.User)]
-public async Task<ApiRequestResult> CreateUserAsync([FromBody] CreateUserRequest request)
-{
-    // 此操作会自动记录日志
-    return await _userService.CreateUserAsync(request);
-}
-```
-
----
-
-### 2026-03-26
-
-#### 新增功能
-
-| 模块 | 功能 | 说明 |
-|------|------|------|
-| Permission | 权限管理模块 | 新增权限实体、角色权限关联，支持按钮级别权限控制 |
-| Permission | 权限分配功能 | 角色管理页面新增分配权限按钮，支持按模块分组选择权限 |
-| Permission | 权限控制功能 | 各页面按钮根据用户权限显示/隐藏 |
-| Login | JWT 动态配置 | JWT 配置从配置文件改为从数据库 Settings 表获取 |
-| Login | 登录角色状态检查 | 用户角色被禁用时禁止登录，并提示禁用的角色名称 |
-| Users | 重置密码功能 | 用户列表操作栏添加重置密码按钮 |
-| Storage | 列表缓存功能 | 用户、角色、菜单、权限列表支持缓存，优先从缓存获取数据 |
-| Role | 删除前检查关联 | 删除角色前检查用户、菜单、权限关联，有关联时禁止删除 |
-| ClearCache | 表格操作列 | 缓存统计表格添加删除操作列，支持单独删除各分类缓存 |
-| Profile | 个人中心完善 | 完整的个人信息展示、编辑资料、修改密码功能 |
-
-#### 新增文件
-
-**Domain 层：**
-- `Entities/Permission.cs` - 权限实体和角色权限关联实体
-
-**Application 层：**
-- `DTOs/PermissionDTO.cs` - 权限相关 DTO 和请求类
-- `Interfaces/IPermissionService.cs` - 权限服务接口
-- `Services/PermissionService.cs` - 权限服务实现
-
-**Infrastructure 层：**
-- `Configuration/PermissionConfiguration.cs` - 权限 EF Core 配置
-- `Configuration/RolePermissionConfiguration.cs` - 角色权限关联 EF Core 配置
-
-**前端：**
-- `utils/permission.ts` - 权限工具函数
-
-#### 数据库迁移
-
-| 迁移名称 | 说明 |
-|----------|------|
-| `AddSettingsTable` | 创建系统设置表 |
-| `AddPermissionTables` | 创建权限表和角色权限关联表 |
-
-#### API 接口
-
-**PermissionController：**
-- `GET /api/Permission/GetPermissionsAsync` - 获取权限列表（分页）
-- `GET /api/Permission/GetAllEnabledPermissionsAsync` - 获取所有启用的权限
-- `GET /api/Permission/GetPermissionsByModuleAsync` - 按模块获取权限
-- `GET /api/Permission/GetPermissionByIdAsync` - 获取权限详情
-- `POST /api/Permission/CreatePermissionAsync` - 创建权限
-- `PUT /api/Permission/UpdatePermissionAsync` - 更新权限
-- `DELETE /api/Permission/DeletePermissionAsync` - 删除权限
-- `POST /api/Permission/EnablePermissionAsync` - 启用权限
-- `POST /api/Permission/DisablePermissionAsync` - 禁用权限
-- `GET /api/Permission/GetRolePermissionIdsAsync` - 获取角色的权限ID列表
-- `POST /api/Permission/AssignRolePermissionsAsync` - 为角色分配权限
-- `GET /api/Permission/GetUserPermissionsAsync` - 获取用户权限列表
-- `GET /api/Permission/HasPermissionAsync` - 检查用户是否有指定权限
-
-**UserController 新增接口：**
-- `PUT /api/User/UpdateProfileAsync` - 更新当前用户资料
-- `POST /api/User/ChangePasswordAsync` - 修改当前用户密码
-
-#### 前端优化
-
-| 文件 | 优化内容 |
-|------|---------|
-| `Login.vue` | 登录成功后获取用户权限并存储到 localStorage |
-| `storage.ts` | 新增 Permissions 键、权限工具函数、权限编码常量、UserDto 类型 |
-| `ClearCache.vue` | 添加权限控制，按钮根据权限显示；表格添加操作列 |
-| `Users.vue` | 添加列表缓存逻辑、权限控制 |
-| `UserRole.vue` | 添加列表缓存逻辑、权限控制、分配权限功能、删除前检查关联 |
-| `Menu.vue` | 添加权限控制 |
-| `System.vue` | 添加权限控制 |
-| `Permissions.vue` | 新增权限管理页面，支持 CRUD 和模块筛选 |
-| `Profile.vue` | 完整重写，添加基本信息展示、编辑资料对话框、修改密码对话框 |
-| `user.ts` | 新增 updateProfile、changePassword API 函数 |
-| `api/index.ts` | 新增 UpdateProfileRequest、ChangePasswordRequest 类型定义 |
-
-#### 后端优化
-
-| 文件 | 优化内容 |
-|------|---------|
-| `LoginService.cs` | JWT 配置从数据库获取，登录时检查用户角色状态 |
-| `ApplicationDbContext.cs` | 新增 Permissions 和 RolePermissions DbSet，新增权限种子数据 |
-| `Startup.cs` | 启动时初始化权限种子数据 |
-| `BaseApiController.cs` | 新增 GetCurrentUserId、GetCurrentUserName 方法 |
-| `IUserDataService.cs` | 新增 UpdateProfileAsync、ChangePasswordAsync 接口 |
-| `UserDataService.cs` | 实现更新资料和修改密码逻辑 |
-| `UserDTO.cs` | 新增 UpdateProfileRequest、ChangePasswordRequest DTO |
-
-#### 权限编码常量
-
-| 模块 | 权限编码 | 说明 |
-|------|----------|------|
-| Menu | `menu:add`, `menu:edit`, `menu:delete`, `menu:add_child` | 菜单管理权限 |
-| User | `user:add`, `user:edit`, `user:delete`, `user:reset_password`, `user:assign_role`, `user:enable`, `user:disable` | 用户管理权限 |
-| Role | `role:add`, `role:edit`, `role:delete`, `role:assign_menu`, `role:assign_user`, `role:enable`, `role:disable` | 角色管理权限 |
-| Setting | `setting:save_jwt`, `setting:save_system` | 系统设置权限 |
-| Cache | `cache:clear_auth`, `cache:clear_user`, `cache:clear_menu`, `cache:clear_list`, `cache:clear_setting`, `cache:clear_all` | 缓存管理权限 |
-
-#### 文档更新
-
-- 新增权限管理模块文档
-- 新增 JWT 动态配置说明
-- 新增权限编码常量说明
-- 更新文档更新日志
-
----
-
-### 2026-03-25
-
-#### 新增功能
-
-| 模块 | 功能 | 说明 |
-|------|------|------|
-| MenuRole | 菜单角色关联模块 | 新增菜单与角色的多对多关联功能 |
-| Role | 角色管理模块 | 完善角色CRUD、用户角色分配、角色菜单分配等功能 |
-| UserRole | 用户角色关联模块 | 支持用户与角色的多对多关联 |
-
-#### 新增文件
-
-**Domain 层：**
-- `Entities/MenuRole.cs` - 菜单角色关联实体
-
-**Application 层：**
-- `DTOs/MenuRoleDTO.cs` - 菜单角色 DTO 和请求类
-- `Interfaces/IMenuRoleService.cs` - 菜单角色服务接口
-- `Services/MenuRoleService.cs` - 菜单角色服务实现
-
-**Infrastructure 层：**
-- `Configuration/MenuRoleConfiguration.cs` - 菜单角色 EF Core 配置
-
-**API 层：**
-- `Controllers/MenuRoleController.cs` - 菜单角色控制器
-
-#### 数据库迁移
-
-| 迁移名称 | 说明 |
-|----------|------|
-| `AddRoleTable` | 创建角色表 |
-| `AddUserRoleTable` | 创建用户角色关联表 |
-| `AddMenuRoleTable` | 创建菜单角色关联表 |
-
-#### API 接口
-
-**MenuRoleController：**
-- `GET /api/MenuRole/GetRoleMenuIdsAsync` - 获取角色的菜单ID列表
-- `GET /api/MenuRole/GetMenuRoleIdsAsync` - 获取菜单的角色ID列表
-- `POST /api/MenuRole/AssignRoleMenusAsync` - 为角色分配菜单
-- `POST /api/MenuRole/AssignMenuRolesAsync` - 为菜单分配角色
-- `GET /api/MenuRole/GetRoleMenusAsync` - 获取角色的菜单树
-- `GET /api/MenuRole/GetUserMenusByRolesAsync` - 获取用户菜单
-- `DELETE /api/MenuRole/ClearRoleMenusAsync` - 清除角色菜单权限
-- `DELETE /api/MenuRole/ClearMenuRolesAsync` - 清除菜单角色关联
-
-**RoleController：**
-- `GET /api/Role/GetRolesAsync` - 获取角色列表（分页）
-- `GET /api/Role/GetRoleByIdAsync` - 获取角色详情
-- `POST /api/Role/CreateRoleAsync` - 创建角色
-- `PUT /api/Role/UpdateRoleAsync` - 更新角色
-- `DELETE /api/Role/DeleteRoleAsync` - 删除角色
-- `POST /api/Role/EnableRoleAsync` - 启用角色
-- `POST /api/Role/DisableRoleAsync` - 禁用角色
-- `GET /api/Role/GetUserRoleIdsAsync` - 获取用户角色
-- `POST /api/Role/AssignUserRolesAsync` - 配置用户角色
-- `GET /api/Role/GetEnabledRolesAsync` - 获取启用角色
-- `GET /api/Role/GetRoleUserIdsAsync` - 获取角色用户
-- `POST /api/Role/AssignRoleUsersAsync` - 配置角色用户
-
-#### 文档更新
-
-- 整理 README.md，将开发规范部分整合为统一章节
-- 优化文档结构，添加目录导航
+- [文档更新日志](#文档更新日志)
 
 ---
 
@@ -812,7 +419,7 @@ public class Repository<TEntity> : IRepository<TEntity> where TEntity : Entity<G
 }
 ```
 
-#### 5.2.5 树形结构数据处理规范
+#### 5.2.6 树形结构数据处理规范
 
 **识别树形结构：** 当实体包含 `ParentId`、`ParentCode` 等字段时，表明为树形结构。
 
@@ -848,7 +455,7 @@ public async Task<ApiRequestResult> GetTreeMenusAsync()
 </el-table>
 ```
 
-#### 5.2.6 API Search 功能
+#### 5.2.7 API Search 功能
 
 用于自动扫描和检索项目中所有标记了 `[ApiSearch]` 注解的 API 方法。
 
@@ -1031,7 +638,7 @@ const toggleStatus = async (row: Item) => {
 - 所有数据变更操作（增删改、状态变更）后都必须调用 `loadData()` 刷新缓存
 - 确保用户看到的数据始终是最新的
 
-#### 5.3.4 字典数据使用规范
+#### 5.3.3 字典数据使用规范
 
 **核心原则：页面上的下拉选项数据必须通过字典接口获取，禁止硬编码**
 
@@ -1085,11 +692,11 @@ onMounted(() => {
 <template>
   <!-- 下拉框使用字典数据 -->
   <el-select v-model="filterParams.status" placeholder="状态" clearable>
-    <el-option 
-      v-for="item in statusOptions" 
-      :key="item.value" 
-      :label="item.label" 
-      :value="item.value" 
+    <el-option
+      v-for="item in statusOptions"
+      :key="item.value"
+      :label="item.label"
+      :value="item.value"
     />
   </el-select>
 
@@ -1142,7 +749,7 @@ export const DICT_TYPES = {
 - 字典的 `value` 值应与后端实体/枚举值保持一致
 - 禁用状态的字典项不会返回给前端
 
-#### 5.3.5 按钮权限设计规范
+#### 5.3.4 按钮权限设计规范
 
 **核心原则：页面按钮的显示/隐藏由按钮数据决定，而非权限编码**
 
@@ -1611,6 +1218,241 @@ dotnet ef database update --project DDDProject.Infrastructure --startup-project 
 
 ---
 
+## 实际开发清单：新增一个模块时按什么顺序改
+
+本章节用于指导“从 0 到 1 新增一个完整模块”的实际开发流程。推荐按“先后端、后数据库、再前端、最后联调”的顺序推进，避免前后端同时改动时反复返工。
+
+### 场景说明
+
+这里的“新增一个模块”指的是类似“用户管理”“角色管理”“日志管理”这类带有列表、增删改查、权限控制、菜单、按钮和前端页面的完整功能模块。
+
+### 一、开发顺序总览
+
+1. 先确认模块范围：模块名称、路由路径、权限编码、是否需要字典、是否需要树形结构。
+2. 在后端 Domain 层新增实体，明确字段、默认值、业务方法。
+3. 在 Infrastructure 层补充 `DbSet`、实体配置、仓储依赖和迁移准备。
+4. 在 Application 层新增 DTO、Service 接口、Service 实现，完成业务逻辑。
+5. 在 API 层新增 Controller 和接口注解，补齐 `[ActionName]`、`[ApiSearch]`、`[Permission]`。
+6. 如果模块需要菜单、按钮、权限或字典，补充对应 Seeder 数据。
+7. 执行数据库迁移和更新，确认数据表、种子数据、接口返回正常。
+8. 在前端新增 API 定义、页面组件、按钮控制、字典加载和缓存逻辑。
+9. 在数据库中补充菜单记录，或者确认种子数据已生成菜单与按钮。
+10. 联调并验证列表、详情、创建、编辑、删除、启停、权限控制、缓存刷新是否正常。
+
+### 二、后端实际修改清单
+
+#### 1. Domain 层
+
+**通常需要新增或修改的文件：**
+
+- `DDDProject.Domain/Entities/模块实体.cs`
+- 如有领域规则，可补充相关枚举、常量、值对象
+
+**要做的事：**
+
+- 定义实体字段，所有属性按规范设置默认值
+- 如果是聚合根，继承项目既有的基类
+- 补充 `Create`、`Update`、`Enable`、`Disable` 等领域方法
+- 时间统一使用 `DateTime.Now`
+- 如果是树形结构，明确 `ParentId`、排序字段等
+
+#### 2. Infrastructure 层
+
+**通常需要新增或修改的文件：**
+
+- `DDDProject.Infrastructure/Contexts/...DbContext.cs`
+- `DDDProject.Infrastructure/EntityConfigurations/模块实体配置.cs` 或项目现有映射位置
+- `DDDProject.Infrastructure/Contexts/Migrations/*`
+- 如项目中有 Repository 注册或特殊仓储实现，也需同步补充
+
+**要做的事：**
+
+- 在 `DbContext` 中添加对应 `DbSet`
+- 配置表名、字段长度、索引、必填项、关系映射
+- 确认是否需要唯一索引、外键、级联行为
+- 准备数据库迁移
+
+#### 3. Application 层
+
+**通常需要新增或修改的文件：**
+
+- `DDDProject.Application/DTOs/模块Dto.cs`
+- `DDDProject.Application/DTOs/Requests/模块请求Dto.cs` 或项目现有请求模型目录
+- `DDDProject.Application/Interfaces/I模块Service.cs`
+- `DDDProject.Application/Services/模块Service.cs`
+
+**要做的事：**
+
+- 定义列表、详情、新增、编辑所需 DTO
+- Service 接口继承 `IApplicationService`
+- 所有异步方法名必须以 `Async` 结尾
+- 返回值统一使用 `ApiRequestResult`
+- 分页统一使用 `PagedRequest` 和 `PagedResult<T>`
+- 所有数据库操作使用异步方法
+- 如果列表页需要前端缓存，返回数据结构要稳定，便于前端直接缓存
+
+#### 4. API 层
+
+**通常需要新增或修改的文件：**
+
+- `DDDProject.API/Controllers/模块Controller.cs`
+
+**要做的事：**
+
+- 控制器继承 `BaseApiController`
+- 路由统一使用 `[Route("api/[controller]/[action]")]`
+- 每个方法都添加 `[ActionName("方法名")]`
+- 需要接口检索的接口添加 `[ApiSearch(...)]`
+- 数据变更接口必须添加 `[Permission("模块:操作")]`
+- 需要登录的控制器或方法添加 `[Authorize]`
+
+**推荐接口最小集合：**
+
+- `Get模块列表Async`
+- `Get模块详情Async`
+- `Create模块Async`
+- `Update模块Async`
+- `Delete模块Async`
+- `Enable模块Async` / `Disable模块Async`（如有状态）
+- `GetEnabled模块Async`（如下拉需要）
+
+#### 5. 种子数据与权限补充
+
+**通常需要新增或修改的文件：**
+
+- `PermissionSeeder.cs`
+- `MenuSeeder.cs` 或数据库菜单初始化位置
+- `ButtonSeeder.cs`
+- `DictionarySeeder.cs`（如果页面有新的字典类型）
+
+**要做的事：**
+
+- 新增模块对应的权限编码，如 `module:add`、`module:edit`、`module:delete`
+- 新增菜单数据，确保前端动态路由能拿到页面入口
+- 为菜单生成按钮数据，确保页面按钮显示正常
+- 如果页面有状态、类型、分类等下拉项，补充字典种子数据
+
+### 三、前端实际修改清单
+
+#### 1. API 接口层
+
+**通常需要新增或修改的文件：**
+
+- `DDDVue/src/api/index.ts`
+- `DDDVue/src/api/模块.ts` 或项目现有接口文件
+
+**要做的事：**
+
+- 定义与后端 `[ActionName]` 一致的接口地址
+- 统一封装列表、详情、新增、编辑、删除、启停接口
+- 保持命名与后端方法一致，降低联调成本
+
+#### 2. 页面与组件层
+
+**通常需要新增或修改的文件：**
+
+- `DDDVue/src/views/home/模块名/模块页面.vue`
+- 如有弹窗表单、详情抽屉，可拆分到 `components`
+
+**要做的事：**
+
+- 新建模块列表页
+- 补充查询区、表格区、分页区、弹窗表单区
+- 如为树形数据，使用 `el-table` 的树形配置
+- 页面路径命名遵循短横线规则，并与菜单路径保持一致
+
+#### 3. 缓存、字典、按钮权限
+
+**通常需要新增或修改的文件：**
+
+- `DDDVue/src/utils/storage.ts`
+- `DDDVue/src/utils/dictionary.ts`
+- `DDDVue/src/utils/buttons.ts`
+- 当前模块页面文件
+
+**要做的事：**
+
+- 列表缓存键遵循 `list_模块名_页码_每页数量`
+- 增删改、启停后必须调用 `loadData()` 刷新缓存
+- 页面下拉项必须走字典接口，禁止硬编码
+- 页面按钮显示通过 `useButtons('菜单路径')` 控制
+
+#### 4. 路由与菜单联动
+
+**说明：**
+
+- 本项目前端路由由后端菜单动态生成，通常不需要手工在前端静态路由里新增业务路由
+- 新页面能否显示，关键在于后端菜单数据和页面文件路径是否匹配
+
+**要做的事：**
+
+- 在 `src/views/home/` 下创建对应页面组件
+- 确认菜单表中的路径与页面目录能一一对应
+- 新增菜单后清理 `sidebarMenu` 缓存或刷新页面验证
+
+### 四、推荐执行顺序（可直接照做）
+
+#### 情况 A：新增普通列表模块
+
+1. 先定义模块名称、表名、菜单路径、权限编码前缀。
+2. 创建 Domain 实体。
+3. 在 Infrastructure 中补 `DbSet` 和实体映射。
+4. 创建 DTO、Service 接口和 Service 实现。
+5. 创建 Controller，补齐 `[ActionName]`、`[ApiSearch]`、`[Permission]`。
+6. 补 `PermissionSeeder`、`MenuSeeder`、`ButtonSeeder`，如有下拉再补 `DictionarySeeder`。
+7. 执行迁移和数据库更新。
+8. 用 Swagger 先验证后端接口。
+9. 前端新增 `api` 定义和 `views/home` 页面。
+10. 接入按钮控制、字典加载、列表缓存。
+11. 联调新增、编辑、删除、分页、状态切换。
+12. 清缓存并验证菜单、按钮、权限是否生效。
+
+#### 情况 B：新增树形模块
+
+在“普通列表模块”基础上，额外补充：
+
+1. 实体增加 `ParentId`、排序字段等层级信息。
+2. Service 中增加树形组装逻辑，如 `BuildTree`。
+3. 列表接口按树结构返回数据。
+4. 前端表格开启 `row-key` 和 `tree-props`。
+5. 新增/编辑时处理父节点选择逻辑。
+
+#### 情况 C：新增带下拉字典的模块
+
+在“普通列表模块”基础上，额外补充：
+
+1. 在 `DictionarySeeder.cs` 中新增字典类型和字典项。
+2. 在前端 `dictionary.ts` 中新增 `DICT_TYPES` 常量。
+3. 页面通过 `useDictionary` 加载选项。
+4. 清理字典缓存，确认页面展示的是最新值。
+
+### 五、最容易漏掉的检查项
+
+- 实体属性是否都设置了默认值
+- null 判断是否使用 `is null` / `is not null`
+- 所有数据库操作是否都是异步
+- Controller 方法是否都加了 `[ActionName]`
+- 数据变更接口是否都加了 `[Permission]`
+- 新权限是否写入 `PermissionSeeder.cs`
+- 新菜单是否能被前端动态路由正确识别
+- 新按钮是否已在 `ButtonSeeder.cs` 中生成
+- 页面下拉项是否误写成了硬编码
+- 增删改后是否调用了 `loadData()` 刷新缓存
+- 是否清除了 `sidebarMenu`、列表缓存、字典缓存后再验证
+
+### 六、建议的自测顺序
+
+1. 后端编译通过。
+2. 迁移执行成功，数据库表结构正确。
+3. Swagger 中逐个验证查询、详情、新增、编辑、删除接口。
+4. 验证未登录、已登录、无权限三种访问情况。
+5. 前端页面能正常打开，菜单能正常显示。
+6. 列表、分页、弹窗表单、删除确认、状态切换功能正常。
+7. 按钮显示与当前菜单按钮配置一致。
+8. 字典标签、下拉项、缓存刷新都符合预期。
+
+---
+
 ## 注意事项
 
 - 遵循 DDD 设计原则
@@ -1621,3 +1463,16 @@ dotnet ef database update --project DDDProject.Infrastructure --startup-project 
 - 所有数据库操作必须使用异步方法
 - 控制器方法必须使用 `[ActionName]` 注解
 - 使用 `DateTime.Now` 代替 `DateTime.UtcNow`（中国标准时间）
+
+---
+
+## 文档更新日志
+
+| 日期 | 更新内容 |
+|------|:--------:|
+| 2026-04-03 | 新增字典数据使用规范（5.3.4），页面下拉选项必须通过字典接口获取；新增日志相关字典类型；修复菜单编辑失败问题 |
+| 2026-04-02 | 新增操作日志模块（OperationLog），自动记录控制器中的增删改导出等操作；新增 `OperationLogFilter` 过滤器 |
+| 2026-04-01 | 新增自定义权限注解 `[Permission]`，支持方法级别的权限控制；为所有控制器的数据变更方法添加权限注解 |
+| 2026-03-31 | 新增按钮管理模块（Button），支持页面按钮的统一管理；新增按钮权限设计规范；新增 `useButtons` 组合式函数 |
+| 2026-03-26 | 新增权限管理模块（Permission），支持按钮级别权限控制；JWT 配置改为从数据库获取；前端列表页添加缓存功能；登录时检查用户角色状态 |
+| 2026-03-25 | 新增 MenuRole 模块（菜单角色关联），完善 Role 模块功能；整理文档结构，将开发规范整合为统一章节 |

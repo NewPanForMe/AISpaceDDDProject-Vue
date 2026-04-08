@@ -227,7 +227,7 @@ const handleSubmit = async () => {
           params: { userId: response.data?.userId }
         })
         // 响应拦截器返回的是 ApiRequestResult 结构
-        if (permissionResponse.success && Array.isArray(permissionResponse.data)) {
+        if (Array.isArray(permissionResponse.data)) {
           // 从 PermissionDto[] 中提取 code 字段
           const permissionCodes = permissionResponse.data.map(p => p.code)
           setUserPermissions(permissionCodes)
@@ -240,7 +240,7 @@ const handleSubmit = async () => {
       // 获取系统配置并存入缓存
       try {
         const settingsResponse = await getAllSettings()
-        if (settingsResponse.success && settingsResponse.data) {
+        if (settingsResponse.data) {
           const settings = settingsResponse.data as SettingDto[]
           settings.forEach(setting => {
             // 系统名称
@@ -462,7 +462,7 @@ const handleForgotPassword = async () => {
 const loadPublicSettings = async () => {
   try {
     const response = await getPublicSettings()
-    if (response.success && response.data) {
+    if (response.data) {
       const settings = response.data as SettingDto[]
       settings.forEach(setting => {
         if (setting.key === 'SystemName' && setting.value) {

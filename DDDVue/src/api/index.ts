@@ -289,6 +289,25 @@ export interface MessageDto {
   createdAt: string;
 }
 
+// 用户消息视图 DTO（用于用户查看自己的消息）
+export interface UserMessageDto {
+  recipientId: string;      // 接收者记录ID
+  messageId: string;        // 消息ID
+  senderId?: string;
+  senderName?: string;
+  title: string;
+  content: string;
+  messageType: string;
+  priority: string;
+  isRead: boolean;
+  readTime?: string;
+  isPushed: boolean;
+  createdAt: string;
+  hasBeenReadByOthers?: boolean;  // 是否有其他用户已读（用于判断是否可删除）
+  isRevoked?: boolean;            // 是否已撤回
+  revokedTime?: string;           // 撤回时间
+}
+
 export interface MessageQueryRequest {
   pageNum: number;
   pageSize: number;
@@ -452,6 +471,7 @@ export interface ApiConfig {
     GetDictionaryByIdAsync: string;
     GetDictionaryByCodeAsync: string;
     GetDictionariesByTypeAsync: string;
+    GetDictionariesByTypesAsync: string;
     CreateDictionaryAsync: string;
     UpdateDictionaryAsync: string;
     DeleteDictionaryAsync: string;
@@ -476,6 +496,12 @@ export interface ApiConfig {
     PushMessageToAllAsync: string;
     PushMessageToRoleAsync: string;
     PushExistingMessageAsync: string;
+    GetUserMessageByIdAsync: string;
+    MarkUserMessageAsReadAsync: string;
+    DeleteUserMessageAsync: string;
+    BatchDeleteUserMessagesAsync: string;
+    RevokeMessageAsync: string;
+    BatchRevokeMessagesAsync: string;
   };
 }
 
@@ -600,6 +626,12 @@ const api: ApiConfig = {
     PushMessageToAllAsync: 'api/Message/PushMessageToAllAsync',
     PushMessageToRoleAsync: 'api/Message/PushMessageToRoleAsync',
     PushExistingMessageAsync: 'api/Message/PushExistingMessageAsync',
+    GetUserMessageByIdAsync: 'api/Message/GetUserMessageByIdAsync',
+    MarkUserMessageAsReadAsync: 'api/Message/MarkUserMessageAsReadAsync',
+    DeleteUserMessageAsync: 'api/Message/DeleteUserMessageAsync',
+    BatchDeleteUserMessagesAsync: 'api/Message/BatchDeleteUserMessagesAsync',
+    RevokeMessageAsync: 'api/Message/RevokeMessageAsync',
+    BatchRevokeMessagesAsync: 'api/Message/BatchRevokeMessagesAsync',
   },
 };
 

@@ -42,6 +42,12 @@
           @row-click="viewDetail"
           :row-class-name="getRowClassName"
         >
+          <el-table-column label="作废状态" width="90">
+            <template #default="{ row }">
+              <el-tag v-if="row.isRevoked" type="info" effect="dark" size="small">已撤回</el-tag>
+              <el-tag v-else type="success" effect="dark" size="small">正常</el-tag>
+            </template>
+          </el-table-column>
           <el-table-column prop="isRead" label="状态" width="80">
             <template #default="{ row }">
               <el-badge is-dot :type="row.isRead ? 'info' : 'danger'" class="read-badge">
@@ -70,7 +76,7 @@
           </el-table-column>
           <el-table-column prop="title" label="标题" min-width="200">
             <template #default="{ row }">
-              <span :class="{ 'unread-title': !row.isRead }">{{ row.title }}</span>
+              <span :class="{ 'unread-title': !row.isRead, 'revoked-title': row.isRevoked }">{{ row.title }}</span>
             </template>
           </el-table-column>
           <el-table-column prop="createdAt" label="发送时间" min-width="170">
@@ -78,10 +84,9 @@
               {{ formatDateTime(row.createdAt) }}
             </template>
           </el-table-column>
-          <el-table-column label="操作" width="150" fixed="right">
+          <el-table-column label="操作" width="80" fixed="right">
             <template #default="{ row }">
               <el-button size="small" type="primary" @click.stop="viewDetail(row)">查看</el-button>
-              <el-button v-if="!row.isPushed" size="small" type="warning" @click.stop="openEditDialog(row)">修改</el-button>
             </template>
           </el-table-column>
         </el-table>
@@ -122,6 +127,13 @@
           </el-tag>
         </el-descriptions-item>
         <el-descriptions-item label="阅读时间">{{ currentMessage?.readTime ? formatDateTime(currentMessage?.readTime) : '-' }}</el-descriptions-item>
+        <el-descriptions-item label="作废状态">
+          <el-tag v-if="currentMessage?.isRevoked" type="info" effect="dark" size="small">已撤回</el-tag>
+          <el-tag v-else type="success" effect="dark" size="small">正常</el-tag>
+        </el-descriptions-item>
+        <el-descriptions-item v-if="currentMessage?.revokedTime" label="撤回时间">
+          {{ formatDateTime(currentMessage.revokedTime) }}
+        </el-descriptions-item>
       </el-descriptions>
       <el-divider content-position="left">消息标题</el-divider>
       <div class="message-title">{{ currentMessage?.title }}</div>
@@ -134,60 +146,26 @@
         </span>
       </template>
     </el-dialog>
-
-    <!-- 修改消息对话框 -->
-    <el-dialog v-model="editDialogVisible" title="修改消息" width="500px" :destroy-on-close="true">
-      <el-form :model="editForm" :rules="messageRules" ref="editFormRef" label-width="80px">
-        <el-form-item label="消息标题" prop="title">
-          <el-input v-model="editForm.title" placeholder="请输入消息标题" maxlength="100" show-word-limit />
-        </el-form-item>
-        <el-form-item label="消息内容" prop="content">
-          <el-input v-model="editForm.content" type="textarea" :rows="4" placeholder="请输入消息内容" maxlength="500" show-word-limit />
-        </el-form-item>
-        <el-form-item label="优先级" prop="priority">
-          <el-select v-model="editForm.priority" placeholder="选择优先级" class="full-width">
-            <el-option v-for="item in priorityOptions" :key="item.value" :label="item.label" :value="item.value" />
-          </el-select>
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <span class="dialog-footer">
-          <el-button @click="editDialogVisible = false">取消</el-button>
-          <el-button type="primary" @click="handleEdit">保存</el-button>
-        </span>
-      </template>
-    </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, reactive, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
-import type { FormInstance } from 'element-plus'
 import * as messageApi from '@/api/message'
-import type { MessageDto, MessageQueryRequest } from '@/api/index'
+import type { UserMessageDto, MessageQueryRequest } from '@/api/index'
 import { showSuccessNotification, showErrorNotification } from '@/utils/notification'
 import { useDictionaries, DICT_TYPES } from '@/utils/dictionary'
 
-const { getMessages, getMessageById, markAsRead: markAsReadApi, markAllAsRead: markAllAsReadApi, updateMessage: updateMessageApi } = messageApi
+const { getMessages, getUserMessageById, markUserMessageAsRead, markAllAsRead: markAllAsReadApi } = messageApi
 
 const router = useRouter()
 
-const messageList = ref<MessageDto[]>([])
+const messageList = ref<UserMessageDto[]>([])
 const unreadCount = ref(0)
 const detailDialogVisible = ref(false)
-const currentMessage = ref<MessageDto | null>(null)
+const currentMessage = ref<UserMessageDto | null>(null)
 const loading = ref(false)
-
-// 修改消息相关
-const editDialogVisible = ref(false)
-const editFormRef = ref<FormInstance>(null)
-const editMessageId = ref('')
-const editForm = reactive({
-  title: '',
-  content: '',
-  priority: 'Normal'
-})
 
 // 字典数据
 const {
@@ -233,13 +211,6 @@ const filterParams = reactive<FilterParams>({
   keyword: ''
 })
 
-// 表单验证规则
-const messageRules = {
-  title: [{ required: true, message: '请输入消息标题', trigger: 'blur' }],
-  content: [{ required: true, message: '请输入消息内容', trigger: 'blur' }],
-  priority: [{ required: true, message: '请选择优先级', trigger: 'change' }]
-}
-
 const formatDateTime = (dateStr?: string) => {
   if (!dateStr) return '-'
   const date = new Date(dateStr)
@@ -255,14 +226,14 @@ const formatDateTime = (dateStr?: string) => {
 
 const getPriorityTag = (priority?: string) => {
   const tagMap: Record<string, string> = {
-    Normal: '',
+    Normal: 'info',
     Important: 'warning',
     Urgent: 'danger'
   }
-  return tagMap[priority || 'Normal'] || ''
+  return tagMap[priority || 'Normal'] || 'info'
 }
 
-const getRowClassName = ({ row }: { row: MessageDto }) => {
+const getRowClassName = ({ row }: { row: UserMessageDto }) => {
   if (!row.isRead) {
     return 'unread-row'
   }
@@ -319,16 +290,17 @@ const handleReset = () => {
   loadMessageData()
 }
 
-const viewDetail = async (row: MessageDto) => {
+const viewDetail = async (row: UserMessageDto) => {
   try {
-    const response = await getMessageById(row.id)
+    // 使用 recipientId 获取消息详情
+    const response = await getUserMessageById(row.recipientId)
     if (response.data) {
-      currentMessage.value = response.data as MessageDto
+      currentMessage.value = response.data as UserMessageDto
       detailDialogVisible.value = true
 
       // 如果是未读消息，自动标记为已读
       if (!currentMessage.value.isRead) {
-        await markAsReadApi(row.id)
+        await markUserMessageAsRead(row.recipientId)
         await loadUnreadCount()
         await loadMessageData()
       }
@@ -342,7 +314,7 @@ const viewDetail = async (row: MessageDto) => {
 const markCurrentAsRead = async () => {
   if (currentMessage.value && !currentMessage.value.isRead) {
     try {
-      await markAsReadApi(currentMessage.value.id)
+      await markUserMessageAsRead(currentMessage.value.recipientId)
       showSuccessNotification({ title: '成功', message: '已标记为已读' })
       detailDialogVisible.value = false
       await loadUnreadCount()
@@ -377,35 +349,7 @@ const handleCurrentChange = (page: number) => {
 }
 
 const closePage = () => {
-  // 返回上一页或跳转到仪表盘
   router.push('/dashboard')
-}
-
-// 打开修改对话框
-const openEditDialog = (row: MessageDto) => {
-  editMessageId.value = row.id
-  editForm.title = row.title
-  editForm.content = row.content
-  editForm.priority = row.priority
-  editDialogVisible.value = true
-}
-
-// 修改消息
-const handleEdit = async () => {
-  if (!editFormRef.value) return
-  await editFormRef.value.validate(async (valid: boolean) => {
-    if (valid) {
-      try {
-        await updateMessageApi(editMessageId.value, editForm)
-        showSuccessNotification({ title: '成功', message: '消息修改成功' })
-        editDialogVisible.value = false
-        await loadMessageData()
-      } catch (error) {
-        console.error('修改消息失败:', error)
-        showErrorNotification({ title: '错误', message: '修改消息失败' })
-      }
-    }
-  })
 }
 
 onMounted(async () => {
@@ -490,6 +434,12 @@ onMounted(async () => {
   color: #409eff;
 }
 
+.revoked-title {
+  text-decoration: line-through;
+  color: #909399 !important;
+  font-weight: normal !important;
+}
+
 .read-badge {
   margin-right: 8px;
 }
@@ -513,4 +463,4 @@ onMounted(async () => {
 .dialog-footer {
   text-align: right;
 }
-</style> 
+</style>

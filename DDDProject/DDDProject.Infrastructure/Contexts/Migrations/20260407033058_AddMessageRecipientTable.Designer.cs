@@ -4,6 +4,7 @@ using DDDProject.Infrastructure.Contexts;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace DDDProject.Infrastructure.Contexts.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260407033058_AddMessageRecipientTable")]
+    partial class AddMessageRecipientTable
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -195,9 +198,6 @@ namespace DDDProject.Infrastructure.Contexts.Migrations
                         .HasColumnType("bit")
                         .HasDefaultValue(false);
 
-                    b.Property<bool>("IsRevoked")
-                        .HasColumnType("bit");
-
                     b.Property<string>("MessageType")
                         .IsRequired()
                         .ValueGeneratedOnAdd()
@@ -225,12 +225,6 @@ namespace DDDProject.Infrastructure.Contexts.Migrations
                         .IsRequired()
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
-
-                    b.Property<Guid?>("RevokedBy")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<DateTime?>("RevokedTime")
-                        .HasColumnType("datetime2");
 
                     b.Property<Guid?>("SenderId")
                         .HasColumnType("uniqueidentifier");
@@ -294,9 +288,6 @@ namespace DDDProject.Infrastructure.Contexts.Migrations
                         .HasColumnType("bit")
                         .HasDefaultValue(false);
 
-                    b.Property<bool>("IsRevoked")
-                        .HasColumnType("bit");
-
                     b.Property<Guid>("MessageId")
                         .HasColumnType("uniqueidentifier");
 
@@ -310,9 +301,6 @@ namespace DDDProject.Infrastructure.Contexts.Migrations
                         .IsRequired()
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
-
-                    b.Property<DateTime?>("RevokedTime")
-                        .HasColumnType("datetime2");
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("datetime2");

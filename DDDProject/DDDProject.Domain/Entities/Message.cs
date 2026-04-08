@@ -6,7 +6,7 @@ namespace DDDProject.Domain.Entities;
 public class Message : AggregateRoot
 {
     /// <summary>
-    /// 发送者ID（系统消息时为 null）
+    /// 发送者 ID（系统消息时为 null）
     /// </summary>
     public Guid? SenderId { get; private set; }
 
@@ -16,7 +16,7 @@ public class Message : AggregateRoot
     public string? SenderName { get; private set; } = string.Empty;
 
     /// <summary>
-    /// 接收者ID
+    /// 接收者 ID
     /// </summary>
     public Guid ReceiverId { get; private set; }
 
@@ -76,7 +76,22 @@ public class Message : AggregateRoot
     public DateTime? PushedTime { get; private set; }
 
     /// <summary>
-    /// 构造函数（私有，用于ORM）
+    /// 是否已撤回
+    /// </summary>
+    public bool IsRevoked { get; private set; } = false;
+
+    /// <summary>
+    /// 撤回时间
+    /// </summary>
+    public DateTime? RevokedTime { get; private set; }
+
+    /// <summary>
+    /// 撤回人 ID
+    /// </summary>
+    public Guid? RevokedBy { get; private set; }
+
+    /// <summary>
+    /// 构造函数（私有，用于 ORM）
     /// </summary>
     protected Message() { }
 
@@ -130,6 +145,32 @@ public class Message : AggregateRoot
             MessageType = MessageTypeConst.System,
             Priority = priority,
             IsRead = false,
+            CreatedAt = DateTime.Now
+        };
+    }
+
+    /// <summary>
+    /// 创建推送消息（批量推送时使用，不指定单个接收者）
+    /// </summary>
+    public static Message CreatePushMessage(
+        string title,
+        string content,
+        string priority = MessagePriority.Normal)
+    {
+        return new Message
+        {
+            Id = Guid.NewGuid(),
+            SenderId = null,
+            SenderName = "系统",
+            ReceiverId = Guid.Empty,
+            ReceiverName = string.Empty,
+            Title = title,
+            Content = content,
+            MessageType = MessageTypeConst.System,
+            Priority = priority,
+            IsRead = false,
+            IsPushed = true,
+            PushedTime = DateTime.Now,
             CreatedAt = DateTime.Now
         };
     }
@@ -193,6 +234,20 @@ public class Message : AggregateRoot
             UpdatedAt = DateTime.Now;
         }
     }
+
+    /// <summary>
+    /// 撤回消息
+    /// </summary>
+    public void Revoke(Guid revokedBy)
+    {
+        if (!IsRevoked)
+        {
+            IsRevoked = true;
+            RevokedTime = DateTime.Now;
+            RevokedBy = revokedBy;
+            UpdatedAt = DateTime.Now;
+        }
+    }
 }
 
 /// <summary>
@@ -212,4 +267,4 @@ public static class MessagePriority
     public const string Normal = "Normal";
     public const string Important = "Important";
     public const string Urgent = "Urgent";
-} 
+}

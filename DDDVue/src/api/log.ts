@@ -38,6 +38,6 @@ export const getModuleStatistics = (params?: { startTime?: string; endTime?: str
 }
 
 // 导出操作日志
-export const exportOperationLogs = (params?: OperationLogQueryRequest) => {
-  return http.get<Blob>(api.OperationLog.ExportOperationLogsAsync, { params, responseType: 'blob' })
+export const exportOperationLogs = (params?: OperationLogQueryRequest): Promise<Blob> => {
+  return http.get<Blob>(api.OperationLog.ExportOperationLogsAsync, { params, responseType: 'blob' }) as unknown as Promise<Blob>
 }
