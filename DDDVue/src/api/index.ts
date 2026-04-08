@@ -366,6 +366,48 @@ export interface PushExistingMessageRequest {
   userIds?: string[];
 }
 
+// 消息接收者 DTO
+export interface MessageRecipientDto {
+  id: string;
+  messageId: string;
+  recipientId: string;
+  recipientName: string;
+  isRead: boolean;
+  readTime?: string;
+  isDeleted: boolean;
+  createdAt: string;
+  isRevoked: boolean;
+  revokedTime?: string;
+}
+
+// 消息接收者查询请求
+export interface MessageRecipientQueryRequest {
+  messageId?: string;
+  recipientId?: string;
+  isRead?: boolean;
+  isDeleted?: boolean;
+  pageNum: number;
+  pageSize: number;
+}
+
+// 消息详情 DTO（包含接收者列表）
+export interface MessageDetailDto {
+  id: string;
+  senderId?: string;
+  senderName?: string;
+  title: string;
+  content: string;
+  messageType: string;
+  priority: string;
+  isPushed: boolean;
+  pushedTime?: string;
+  createdAt: string;
+  recipients: MessageRecipientDto[];
+  recipientCount: number;
+  readCount: number;
+  unreadCount: number;
+}
+
 // 分页响应接口
 export interface PagedResult<T> {
   list: T[];
@@ -502,6 +544,8 @@ export interface ApiConfig {
     BatchDeleteUserMessagesAsync: string;
     RevokeMessageAsync: string;
     BatchRevokeMessagesAsync: string;
+    GetMessageDetailAsync: string;
+    GetMessageRecipientsAsync: string;
   };
 }
 
@@ -632,6 +676,8 @@ const api: ApiConfig = {
     BatchDeleteUserMessagesAsync: 'api/Message/BatchDeleteUserMessagesAsync',
     RevokeMessageAsync: 'api/Message/RevokeMessageAsync',
     BatchRevokeMessagesAsync: 'api/Message/BatchRevokeMessagesAsync',
+    GetMessageDetailAsync: 'api/Message/GetMessageDetailAsync',
+    GetMessageRecipientsAsync: 'api/Message/GetMessageRecipientsAsync',
   },
 };
 

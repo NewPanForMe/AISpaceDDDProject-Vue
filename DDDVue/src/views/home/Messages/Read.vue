@@ -107,7 +107,7 @@
     </div>
 
     <!-- 消息详情对话框 -->
-    <el-dialog v-model="detailDialogVisible" title="消息详情" width="600px" :destroy-on-close="true">
+    <el-dialog v-model="detailDialogVisible" title="消息详情" width="800px" :destroy-on-close="true">
       <el-descriptions :column="2" border>
         <el-descriptions-item label="推送人">{{ currentMessage?.senderName || '系统' }}</el-descriptions-item>
         <el-descriptions-item label="消息类型">
@@ -135,6 +135,44 @@
           {{ formatDateTime(currentMessage.revokedTime) }}
         </el-descriptions-item>
       </el-descriptions>
+
+      <!-- 接收人阅读状态统计 -->
+      <el-divider content-position="left">接收人阅读状态</el-divider>
+      <div v-if="messageDetail" class="recipient-stats">
+        <el-tag type="info" effect="plain">总接收人: {{ messageDetail.recipientCount }}</el-tag>
+        <el-tag type="success" effect="plain">已读: {{ messageDetail.readCount }}</el-tag>
+        <el-tag type="warning" effect="plain">未读: {{ messageDetail.unreadCount }}</el-tag>
+      </div>
+
+      <!-- 接收人列表表格 -->
+      <el-table
+        v-loading="recipientLoading"
+        :data="recipientList"
+        style="width: 100%; margin-top: 12px;"
+        max-height="300"
+        :header-cell-style="{ background: '#f5f7fa', color: '#333' }"
+      >
+        <el-table-column prop="recipientName" label="接收人" min-width="120" />
+        <el-table-column label="阅读状态" width="100">
+          <template #default="{ row }">
+            <el-badge is-dot :type="row.isRead ? 'success' : 'danger'" class="read-badge">
+              <span>{{ row.isRead ? '已读' : '未读' }}</span>
+            </el-badge>
+          </template>
+        </el-table-column>
+        <el-table-column label="阅读时间" min-width="170">
+          <template #default="{ row }">
+            {{ row.readTime ? formatDateTime(row.readTime) : '-' }}
+          </template>
+        </el-table-column>
+        <el-table-column label="撤回状态" width="100">
+          <template #default="{ row }">
+            <el-tag v-if="row.isRevoked || currentMessage?.isRevoked" type="info" effect="dark" size="small">已撤回</el-tag>
+            <el-tag v-else type="success" effect="dark" size="small">正常</el-tag>
+          </template>
+        </el-table-column>
+      </el-table>
+
       <el-divider content-position="left">消息标题</el-divider>
       <div class="message-title">{{ currentMessage?.title }}</div>
       <el-divider content-position="left">消息内容</el-divider>
@@ -142,7 +180,7 @@
       <template #footer>
         <span class="dialog-footer">
           <el-button @click="detailDialogVisible = false">关闭</el-button>
-          <el-button v-if="currentMessage && !currentMessage.isRead" type="primary" @click="markCurrentAsRead">标记已读</el-button>
+          <el-button v-if="currentMessage && !currentMessage.isRead && !currentMessage.isRevoked" type="primary" @click="markCurrentAsRead">标记已读</el-button>
         </span>
       </template>
     </el-dialog>
@@ -153,7 +191,8 @@
 import { ref, reactive, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import * as messageApi from '@/api/message'
-import type { UserMessageDto, MessageQueryRequest } from '@/api/index'
+import { getMessageDetail } from '@/api/message'
+import type { UserMessageDto, MessageQueryRequest, MessageDetailDto, MessageRecipientDto } from '@/api/index'
 import { showSuccessNotification, showErrorNotification } from '@/utils/notification'
 import { useDictionaries, DICT_TYPES } from '@/utils/dictionary'
 
@@ -166,6 +205,9 @@ const unreadCount = ref(0)
 const detailDialogVisible = ref(false)
 const currentMessage = ref<UserMessageDto | null>(null)
 const loading = ref(false)
+const messageDetail = ref<MessageDetailDto | null>(null)
+const recipientList = ref<MessageRecipientDto[]>([])
+const recipientLoading = ref(false)
 
 // 字典数据
 const {
@@ -298,8 +340,24 @@ const viewDetail = async (row: UserMessageDto) => {
       currentMessage.value = response.data as UserMessageDto
       detailDialogVisible.value = true
 
-      // 如果是未读消息，自动标记为已读
-      if (!currentMessage.value.isRead) {
+      // 同时获取消息详情（包含接收人列表）
+      recipientLoading.value = true
+      try {
+        const detailResponse = await getMessageDetail(row.messageId)
+        if (detailResponse.data) {
+          messageDetail.value = detailResponse.data as MessageDetailDto
+          recipientList.value = messageDetail.value.recipients || []
+        }
+      } catch (err) {
+        console.error('获取接收人列表失败:', err)
+        // 如果没有权限获取接收人列表，不影响基本信息展示
+        recipientList.value = []
+      } finally {
+        recipientLoading.value = false
+      }
+
+      // 如果是未读消息且未撤回，自动标记为已读
+      if (!currentMessage.value.isRead && !currentMessage.value.isRevoked) {
         await markUserMessageAsRead(row.recipientId)
         await loadUnreadCount()
         await loadMessageData()
@@ -312,7 +370,7 @@ const viewDetail = async (row: UserMessageDto) => {
 }
 
 const markCurrentAsRead = async () => {
-  if (currentMessage.value && !currentMessage.value.isRead) {
+  if (currentMessage.value && !currentMessage.value.isRead && !currentMessage.value.isRevoked) {
     try {
       await markUserMessageAsRead(currentMessage.value.recipientId)
       showSuccessNotification({ title: '成功', message: '已标记为已读' })
@@ -442,6 +500,12 @@ onMounted(async () => {
 
 .read-badge {
   margin-right: 8px;
+}
+
+.recipient-stats {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 12px;
 }
 
 .message-title {
