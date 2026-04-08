@@ -119,7 +119,7 @@ export const getDictByTypes = async (types: string[]): Promise<Record<string, Di
       const responseData = response.data || response
       if (responseData && typeof responseData === 'object') {
         for (const type of typesToFetch) {
-          const items = responseData[type] || []
+          const items = (responseData as any)[type] || []
           // 过滤启用状态的字典，并转换为 DictItem 格式
           const dictItems: DictItem[] = items
             .filter((item: DictionaryDto) => item.status === 1)

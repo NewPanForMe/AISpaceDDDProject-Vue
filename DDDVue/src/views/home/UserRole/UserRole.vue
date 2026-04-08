@@ -726,7 +726,9 @@ const getAllMenuIds = (menus: MenuTree[]): string[] => {
   const ids: string[] = []
   const traverse = (menuList: MenuTree[]) => {
     menuList.forEach(menu => {
-      ids.push(menu.id)
+      if (menu.id) {
+        ids.push(String(menu.id))
+      }
       if (menu.children && menu.children.length > 0) {
         traverse(menu.children)
       }
@@ -772,7 +774,7 @@ const submitMenuForm = async () => {
           api.Permission.GetUserPermissionsAsync,
           { params: { userId: currentUserInfo.userId } }
         )
-        if (permResponse.success && Array.isArray(permResponse.data)) {
+        if (Array.isArray(permResponse.data)) {
           const permissionCodes = permResponse.data.map(p => p.code)
           setUserPermissions(permissionCodes)
         }
@@ -875,7 +877,7 @@ const submitPermissionForm = async () => {
           api.Permission.GetUserPermissionsAsync,
           { params: { userId: currentUserInfo.userId } }
         )
-        if (permResponse.success && Array.isArray(permResponse.data)) {
+        if (Array.isArray(permResponse.data)) {
           const permissionCodes = permResponse.data.map(p => p.code)
           setUserPermissions(permissionCodes)
         }

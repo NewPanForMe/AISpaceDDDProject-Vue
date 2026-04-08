@@ -92,4 +92,54 @@ public interface IMessageService : IApplicationService
     /// 推送已有消息给其他用户
     /// </summary>
     Task<ApiRequestResult> PushExistingMessageAsync(Guid messageId, Guid userId, PushExistingMessageRequest request);
+
+    /// <summary>
+    /// 获取消息详情（包含接收者列表）- 管理员查看
+    /// </summary>
+    Task<ApiRequestResult> GetMessageDetailAsync(Guid messageId);
+
+    /// <summary>
+    /// 获取消息接收者列表
+    /// </summary>
+    Task<ApiRequestResult> GetMessageRecipientsAsync(Guid messageId, MessageRecipientQueryRequest request);
+
+    /// <summary>
+    /// 获取用户的消息列表（基于 MessageRecipient）
+    /// </summary>
+    Task<ApiRequestResult> GetUserMessagesAsync(Guid userId, MessageQueryRequest request);
+
+    /// <summary>
+    /// 获取用户消息详情
+    /// </summary>
+    Task<ApiRequestResult> GetUserMessageByIdAsync(Guid recipientId, Guid userId);
+
+    /// <summary>
+    /// 标记用户消息为已读
+    /// </summary>
+    Task<ApiRequestResult> MarkUserMessageAsReadAsync(Guid recipientId, Guid userId);
+
+    /// <summary>
+    /// 删除用户消息
+    /// </summary>
+    Task<ApiRequestResult> DeleteUserMessageAsync(Guid recipientId, Guid userId);
+
+    /// <summary>
+    /// 批量删除用户消息
+    /// </summary>
+    Task<ApiRequestResult> BatchDeleteUserMessagesAsync(List<Guid> recipientIds, Guid userId);
+
+    /// <summary>
+    /// 获取所有消息列表（管理员）
+    /// </summary>
+    Task<ApiRequestResult> GetAllMessagesAsync(MessageQueryRequest request);
+
+    /// <summary>
+    /// 撤回消息（只有发送者可以撤回）
+    /// </summary>
+    Task<ApiRequestResult> RevokeMessageAsync(Guid messageId, Guid userId);
+
+    /// <summary>
+    /// 批量撤回消息
+    /// </summary>
+    Task<ApiRequestResult> BatchRevokeMessagesAsync(List<Guid> messageIds, Guid userId);
 }

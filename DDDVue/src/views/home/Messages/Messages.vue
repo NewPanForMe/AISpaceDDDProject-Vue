@@ -21,10 +21,10 @@
               <el-input v-model="filterParams.keyword" placeholder="搜索标题" clearable class="filter-input" @clear="handleFilterChange" @keyup.enter="handleFilterChange" />
               <el-button @click="handleReset">重置</el-button>
               <el-divider direction="vertical" />
-              <el-button v-if="hasBtn('message:add')" type="primary" @click="openAddDialog">新增</el-button>
               <el-button v-if="hasBtn('message:push')" type="success" @click="openPushDialog">新建推送</el-button>
               <el-button type="primary" @click="handleMarkAllRead" :disabled="unreadCount === 0">全部已读</el-button>
-              <el-button v-if="hasBtn('message:delete')" type="danger" @click="handleBatchDelete" :disabled="selectedIds.length === 0">批量删除</el-button>
+              <el-button v-if="hasBtn('message:delete')" type="danger" @click="handleBatchDelete" :disabled="selectedIds.length === 0 || !hasDeletableSelected">批量删除</el-button>
+              <el-button v-if="hasBtn('message:revoke')" type="warning" @click="handleBatchRevoke" :disabled="selectedIds.length === 0">批量撤回</el-button>
             </div>
           </div>
         </template>
@@ -37,6 +37,12 @@
           :row-class-name="getRowClassName"
         >
           <el-table-column type="selection" width="50" />
+          <el-table-column label="作废状态" width="90">
+            <template #default="{ row }">
+              <el-tag v-if="row.isRevoked" type="info" effect="dark" size="small">已撤回</el-tag>
+              <el-tag v-else type="success" effect="dark" size="small">正常</el-tag>
+            </template>
+          </el-table-column>
           <el-table-column prop="isRead" label="状态" width="80">
             <template #default="{ row }">
               <el-badge is-dot :type="row.isRead ? 'info' : 'danger'" class="read-badge">
@@ -65,7 +71,7 @@
           </el-table-column>
           <el-table-column prop="title" label="标题" min-width="200">
             <template #default="{ row }">
-              <span :class="{ 'unread-title': !row.isRead }">{{ row.title }}</span>
+              <span :class="{ 'unread-title': !row.isRead, 'revoked-title': row.isRevoked }">{{ row.title }}</span>
             </template>
           </el-table-column>
           <el-table-column prop="createdAt" label="发送时间" min-width="170">
@@ -80,7 +86,8 @@
                 <el-button v-if="!row.isRead" size="small" type="success" @click="markSingleAsRead(row)">已读</el-button>
                 <el-button v-if="hasBtn('message:push') && !row.isPushed" size="small" type="success" @click="openPushExistingDialog(row)">推送</el-button>
                 <el-button v-if="hasBtn('message:edit') && !row.isPushed" size="small" type="warning" @click="openEditDialog(row)">修改</el-button>
-                <el-button v-if="hasBtn('message:delete')" size="small" type="danger" @click="handleDelete(row)">删除</el-button>
+                <el-button v-if="hasBtn('message:revoke') && !row.isRevoked" size="small" type="warning" @click="handleRevoke(row)">撤回</el-button>
+                <el-button v-if="hasBtn('message:delete') && !row.isRead && !row.hasBeenReadByOthers" size="small" type="danger" @click="handleDelete(row)">删除</el-button>
               </div>
             </template>
           </el-table-column>
@@ -129,34 +136,6 @@
         <span class="dialog-footer">
           <el-button @click="detailDialogVisible = false">关闭</el-button>
           <el-button v-if="currentMessage && !currentMessage.isRead" type="primary" @click="markCurrentAsRead">标记已读</el-button>
-        </span>
-      </template>
-    </el-dialog>
-
-    <!-- 新增消息对话框 -->
-    <el-dialog v-model="addDialogVisible" title="发送消息" width="500px" :destroy-on-close="true">
-      <el-form :model="addForm" :rules="messageRules" ref="addFormRef" label-width="80px">
-        <el-form-item label="接收用户" prop="receiverId">
-          <el-select v-model="addForm.receiverId" placeholder="选择用户" filterable class="full-width" @change="handleUserSelect">
-            <el-option v-for="user in userList" :key="user.id" :label="user.realName || user.userName" :value="user.id" />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="消息标题" prop="title">
-          <el-input v-model="addForm.title" placeholder="请输入消息标题" maxlength="100" show-word-limit />
-        </el-form-item>
-        <el-form-item label="消息内容" prop="content">
-          <el-input v-model="addForm.content" type="textarea" :rows="4" placeholder="请输入消息内容" maxlength="500" show-word-limit />
-        </el-form-item>
-        <el-form-item label="优先级" prop="priority">
-          <el-select v-model="addForm.priority" placeholder="选择优先级" class="full-width">
-            <el-option v-for="item in priorityOptions" :key="item.value" :label="item.label" :value="item.value" />
-          </el-select>
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <span class="dialog-footer">
-          <el-button @click="addDialogVisible = false">取消</el-button>
-          <el-button type="primary" @click="handleAdd">发送</el-button>
         </span>
       </template>
     </el-dialog>
@@ -259,21 +238,21 @@
 import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessageBox, type FormInstance, type FormRules } from 'element-plus'
 import * as messageApi from '@/api/message'
+import { revokeMessage, batchRevokeMessages } from '@/api/message'
 import * as userApi from '@/api/user'
 import * as roleApi from '@/api/role'
-import type { MessageDto, MessageQueryRequest, UserDto, RoleDto, CreateMessageRequest, UpdateMessageRequest, PushMessageRequest, PushMessageToRoleRequest, PushExistingMessageRequest } from '@/api/index'
+import type { UserMessageDto, MessageQueryRequest, UserDto, RoleDto, UpdateMessageRequest, PushMessageRequest, PushMessageToRoleRequest, PushExistingMessageRequest } from '@/api/index'
 import { showSuccessNotification, showErrorNotification } from '@/utils/notification'
 import { useButtons } from '@/utils/buttons'
 import { useDictionaries, DICT_TYPES } from '@/utils/dictionary'
 
 const {
   getMessages,
-  getMessageById,
-  sendMessage,
-  markAsRead,
+  getUserMessageById,
+  markUserMessageAsRead,
   markAllAsRead,
-  deleteMessage,
-  batchDeleteMessages,
+  deleteUserMessage,
+  batchDeleteUserMessages,
   getUnreadCount,
   updateMessage,
   pushMessageToAll,
@@ -314,14 +293,20 @@ interface FilterParams {
   keyword: string
 }
 
-const messageList = ref<MessageDto[]>([])
+const messageList = ref<UserMessageDto[]>([])
 const selectedIds = ref<string[]>([])
+const selectedMessages = ref<UserMessageDto[]>([])
 const pagination = ref<Pagination>({
   pageNum: 1,
   pageSize: 10,
   total: 0
 })
 const unreadCount = ref(0)
+
+// 选中的消息中是否有可删除的消息（未读且没有其他用户已读）
+const hasDeletableSelected = computed(() => {
+  return selectedMessages.value.some(msg => !msg.isRead && !msg.hasBeenReadByOthers)
+})
 
 // 用户和角色列表
 const userList = ref<UserDto[]>([])
@@ -335,19 +320,7 @@ const filterParams = reactive<FilterParams>({
 })
 
 const detailDialogVisible = ref(false)
-const currentMessage = ref<MessageDto | null>(null)
-
-// 新增消息表单
-const addDialogVisible = ref(false)
-const addFormRef = ref<FormInstance>()
-const addForm = reactive<CreateMessageRequest>({
-  receiverId: '',
-  receiverName: '',
-  title: '',
-  content: '',
-  messageType: 'User',
-  priority: 'Normal'
-})
+const currentMessage = ref<UserMessageDto | null>(null)
 
 // 修改消息表单
 const editDialogVisible = ref(false)
@@ -372,7 +345,6 @@ const pushForm = reactive({
 
 // 表单验证规则
 const messageRules: FormRules = {
-  receiverId: [{ required: true, message: '请选择接收用户', trigger: 'change' }],
   title: [{ required: true, message: '请输入消息标题', trigger: 'blur' }],
   content: [{ required: true, message: '请输入消息内容', trigger: 'blur' }],
   priority: [{ required: true, message: '请选择优先级', trigger: 'change' }]
@@ -400,7 +372,7 @@ const pushRules: FormRules = {
 // 推送已有消息表单
 const pushExistingDialogVisible = ref(false)
 const pushExistingFormRef = ref<FormInstance>()
-const currentPushMessage = ref<MessageDto | null>(null)
+const currentPushMessage = ref<UserMessageDto | null>(null)
 const pushExistingForm = reactive<PushExistingMessageRequest>({
   pushType: 'all',
   roleIds: [],
@@ -450,14 +422,14 @@ const formatDateTime = (dateStr?: string) => {
 
 const getPriorityTag = (priority?: string) => {
   const tagMap: Record<string, string> = {
-    Normal: '',
+    Normal: 'info',
     Important: 'warning',
     Urgent: 'danger'
   }
-  return tagMap[priority || 'Normal'] || ''
+  return tagMap[priority || 'Normal'] || 'info'
 }
 
-const getRowClassName = ({ row }: { row: MessageDto }) => {
+const getRowClassName = ({ row }: { row: UserMessageDto }) => {
   if (!row.isRead) {
     return 'unread-row'
   }
@@ -535,31 +507,14 @@ const handleReset = () => {
   loadMessageData()
 }
 
-const handleSelectionChange = (selection: MessageDto[]) => {
-  selectedIds.value = selection.map(item => item.id)
-}
-
-// 用户选择处理
-const handleUserSelect = (userId: string) => {
-  const user = userList.value.find(u => u.id === userId)
-  if (user) {
-    addForm.receiverName = user.realName || user.userName
-  }
-}
-
-// 打开新增对话框
-const openAddDialog = () => {
-  addForm.receiverId = ''
-  addForm.receiverName = ''
-  addForm.title = ''
-  addForm.content = ''
-  addForm.priority = 'Normal'
-  addDialogVisible.value = true
+const handleSelectionChange = (selection: UserMessageDto[]) => {
+  selectedIds.value = selection.map(item => item.recipientId)
+  selectedMessages.value = selection
 }
 
 // 打开修改对话框
-const openEditDialog = (row: MessageDto) => {
-  editMessageId.value = row.id
+const openEditDialog = (row: UserMessageDto) => {
+  editMessageId.value = row.messageId
   editForm.title = row.title
   editForm.content = row.content
   editForm.priority = row.priority
@@ -577,30 +532,12 @@ const openPushDialog = () => {
 }
 
 // 打开推送已有消息对话框
-const openPushExistingDialog = (row: MessageDto) => {
+const openPushExistingDialog = (row: UserMessageDto) => {
   currentPushMessage.value = row
   pushExistingForm.pushType = 'all'
   pushExistingForm.roleIds = []
   pushExistingForm.userIds = []
   pushExistingDialogVisible.value = true
-}
-
-// 新增消息
-const handleAdd = async () => {
-  if (!addFormRef.value) return
-  await addFormRef.value.validate(async (valid) => {
-    if (valid) {
-      try {
-        await sendMessage(addForm)
-        showSuccessNotification({ title: '成功', message: '消息发送成功' })
-        addDialogVisible.value = false
-        await loadMessageData()
-      } catch (error) {
-        console.error('发送消息失败:', error)
-        showErrorNotification({ title: '错误', message: '发送消息失败' })
-      }
-    }
-  })
 }
 
 // 修改消息
@@ -658,7 +595,7 @@ const handlePush = async () => {
 // 推送已有消息
 const handlePushExisting = async () => {
   if (!pushExistingFormRef.value || !currentPushMessage.value) return
-  const messageId = currentPushMessage.value.id
+  const messageId = currentPushMessage.value.messageId
   await pushExistingFormRef.value.validate(async (valid) => {
     if (valid) {
       try {
@@ -680,15 +617,15 @@ const handlePushExisting = async () => {
   })
 }
 
-const viewDetail = async (row: MessageDto) => {
+const viewDetail = async (row: UserMessageDto) => {
   try {
-    const response = await getMessageById(row.id)
+    const response = await getUserMessageById(row.recipientId)
     if (response.data) {
-      currentMessage.value = response.data as MessageDto
+      currentMessage.value = response.data as UserMessageDto
       detailDialogVisible.value = true
 
       if (!currentMessage.value.isRead) {
-        await markAsRead(row.id)
+        await markUserMessageAsRead(row.recipientId)
         await loadUnreadCount()
         await loadMessageData()
       }
@@ -702,7 +639,7 @@ const viewDetail = async (row: MessageDto) => {
 const markCurrentAsRead = async () => {
   if (currentMessage.value && !currentMessage.value.isRead) {
     try {
-      await markAsRead(currentMessage.value.id)
+      await markUserMessageAsRead(currentMessage.value.recipientId)
       showSuccessNotification({ title: '成功', message: '已标记为已读' })
       detailDialogVisible.value = false
       await loadUnreadCount()
@@ -731,7 +668,7 @@ const handleMarkAllRead = async () => {
   }
 }
 
-const handleDelete = async (row: MessageDto) => {
+const handleDelete = async (row: UserMessageDto) => {
   try {
     await ElMessageBox.confirm('确认删除该消息吗？', '提示', {
       confirmButtonText: '确定',
@@ -739,7 +676,11 @@ const handleDelete = async (row: MessageDto) => {
       type: 'warning'
     })
 
-    await deleteMessage(row.id)
+    const response = await deleteUserMessage(row.recipientId)
+    if (response.success === false) {
+      showErrorNotification({ title: '错误', message: response.message || '删除失败' })
+      return
+    }
     showSuccessNotification({ title: '成功', message: '删除成功' })
     await loadUnreadCount()
     await loadMessageData()
@@ -748,10 +689,59 @@ const handleDelete = async (row: MessageDto) => {
   }
 }
 
-// 单个标记已读
-const markSingleAsRead = async (row: MessageDto) => {
+// 撤回单条消息
+const handleRevoke = async (row: UserMessageDto) => {
   try {
-    await markAsRead(row.id)
+    await ElMessageBox.confirm('确认撤回该消息吗？撤回后消息将作废，但接收者仍可查看。', '提示', {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      type: 'warning'
+    })
+
+    await revokeMessage(row.messageId)
+    showSuccessNotification({ title: '成功', message: '消息已撤回' })
+    await loadUnreadCount()
+    await loadMessageData()
+  } catch (error) {
+    if (error !== 'cancel') {
+      console.error('撤回消息失败:', error)
+      showErrorNotification({ title: '错误', message: '撤回消息失败' })
+    }
+  }
+}
+
+// 批量撤回消息
+const handleBatchRevoke = async () => {
+  if (selectedIds.value.length === 0) {
+    showErrorNotification({ title: '提示', message: '请选择要撤回的消息' })
+    return
+  }
+
+  try {
+    await ElMessageBox.confirm(`确认撤回选中的 ${selectedIds.value.length} 条消息吗？撤回后消息将作废，但接收者仍可查看。`, '提示', {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      type: 'warning'
+    })
+
+    const messageIds = selectedMessages.value.map(msg => msg.messageId)
+    await batchRevokeMessages(messageIds)
+    showSuccessNotification({ title: '成功', message: '批量撤回成功' })
+    selectedIds.value = []
+    await loadUnreadCount()
+    await loadMessageData()
+  } catch (error) {
+    if (error !== 'cancel') {
+      console.error('批量撤回失败:', error)
+      showErrorNotification({ title: '错误', message: '批量撤回失败' })
+    }
+  }
+}
+
+// 单个标记已读
+const markSingleAsRead = async (row: UserMessageDto) => {
+  try {
+    await markUserMessageAsRead(row.recipientId)
     showSuccessNotification({ title: '成功', message: '已标记为已读' })
     await loadUnreadCount()
     await loadMessageData()
@@ -762,14 +752,23 @@ const markSingleAsRead = async (row: MessageDto) => {
 }
 
 const handleBatchDelete = async () => {
+  // 过滤出可删除的消息（未读且没有其他用户已读）
+  const deletableMessages = selectedMessages.value.filter(msg => !msg.isRead && !msg.hasBeenReadByOthers)
+
+  if (deletableMessages.length === 0) {
+    showErrorNotification({ title: '提示', message: '选中的消息中有其他用户已读，无法删除' })
+    return
+  }
+
   try {
-    await ElMessageBox.confirm(`确认删除选中的 ${selectedIds.value.length} 条消息吗？`, '提示', {
+    await ElMessageBox.confirm(`确认删除选中的 ${deletableMessages.length} 条消息吗？`, '提示', {
       confirmButtonText: '确定',
       cancelButtonText: '取消',
       type: 'warning'
     })
 
-    await batchDeleteMessages(selectedIds.value)
+    const deletableIds = deletableMessages.map(msg => msg.recipientId)
+    await batchDeleteUserMessages(deletableIds)
     showSuccessNotification({ title: '成功', message: '批量删除成功' })
     selectedIds.value = []
     await loadUnreadCount()
@@ -866,6 +865,12 @@ onMounted(async () => {
 .unread-title {
   font-weight: bold;
   color: #409eff;
+}
+
+.revoked-title {
+  text-decoration: line-through;
+  color: #909399 !important;
+  font-weight: normal !important;
 }
 
 .read-badge {

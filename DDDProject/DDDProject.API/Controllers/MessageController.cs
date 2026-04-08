@@ -34,7 +34,7 @@ public class MessageController : BaseApiController
     public async Task<ApiRequestResult> GetMessagesAsync([FromQuery] MessageQueryRequest request)
     {
         var userId = GetCurrentUserId() ?? throw new UnauthorizedAccessException("用户未登录");
-        return await _messageService.GetMessagesAsync(userId, request);
+        return await _messageService.GetUserMessagesAsync(userId, request);
     }
 
     /// <summary>
@@ -246,4 +246,127 @@ public class MessageController : BaseApiController
         var userId = GetCurrentUserId() ?? throw new UnauthorizedAccessException("用户未登录");
         return await _messageService.PushExistingMessageAsync(messageId, userId, request);
     }
+
+    #region 新增 API
+
+    /// <summary>
+    /// 获取消息详情（包含接收者列表）- 管理员查看
+    /// </summary>
+    [HttpGet]
+    [ActionName("GetMessageDetailAsync")]
+    [Permission("message:view")]
+    [ApiSearch(Name = "获取消息详情（管理员）", Description = "获取消息详情及接收者列表", Category = ApiSearchCategory.Other)]
+    public async Task<ApiRequestResult> GetMessageDetailAsync([FromQuery] Guid messageId)
+    {
+        return await _messageService.GetMessageDetailAsync(messageId);
+    }
+
+    /// <summary>
+    /// 获取消息接收者列表
+    /// </summary>
+    [HttpGet]
+    [ActionName("GetMessageRecipientsAsync")]
+    [Permission("message:view")]
+    [ApiSearch(Name = "获取消息接收者列表", Description = "获取指定消息的接收者列表", Category = ApiSearchCategory.Other)]
+    public async Task<ApiRequestResult> GetMessageRecipientsAsync([FromQuery] Guid messageId, [FromQuery] MessageRecipientQueryRequest request)
+    {
+        request.MessageId = messageId;
+        return await _messageService.GetMessageRecipientsAsync(messageId, request);
+    }
+
+    /// <summary>
+    /// 获取用户消息详情（通过接收者ID）
+    /// </summary>
+    [HttpGet]
+    [ActionName("GetUserMessageByIdAsync")]
+    [ApiSearch(Name = "获取用户消息详情", Description = "通过接收者记录ID获取消息详情", Category = ApiSearchCategory.Other)]
+    public async Task<ApiRequestResult> GetUserMessageByIdAsync([FromQuery] Guid recipientId)
+    {
+        var userId = GetCurrentUserId() ?? throw new UnauthorizedAccessException("用户未登录");
+        return await _messageService.GetUserMessageByIdAsync(recipientId, userId);
+    }
+
+    /// <summary>
+    /// 标记用户消息为已读（通过接收者ID）
+    /// </summary>
+    [HttpPost]
+    [ActionName("MarkUserMessageAsReadAsync")]
+    [ApiSearch(Name = "标记用户消息已读", Description = "通过接收者记录ID标记消息为已读", Category = ApiSearchCategory.Other)]
+    public async Task<ApiRequestResult> MarkUserMessageAsReadAsync([FromQuery] Guid recipientId)
+    {
+        var userId = GetCurrentUserId() ?? throw new UnauthorizedAccessException("用户未登录");
+        return await _messageService.MarkUserMessageAsReadAsync(recipientId, userId);
+    }
+
+    /// <summary>
+    /// 删除用户消息（通过接收者ID）
+    /// </summary>
+    [HttpDelete]
+    [ActionName("DeleteUserMessageAsync")]
+    [Permission("message:delete")]
+    [ApiSearch(Name = "删除用户消息", Description = "通过接收者记录ID删除消息", Category = ApiSearchCategory.Other)]
+    public async Task<IActionResult> DeleteUserMessageAsync([FromQuery] Guid recipientId)
+    {
+        var userId = GetCurrentUserId() ?? throw new UnauthorizedAccessException("用户未登录");
+        var result = await _messageService.DeleteUserMessageAsync(recipientId, userId);
+        if (!result.Success)
+            return BadRequest(result);
+        return NoContent();
+    }
+
+    /// <summary>
+    /// 批量删除用户消息（通过接收者ID列表）
+    /// </summary>
+    [HttpDelete]
+    [ActionName("BatchDeleteUserMessagesAsync")]
+    [Permission("message:delete")]
+    [ApiSearch(Name = "批量删除用户消息", Description = "通过接收者记录ID列表批量删除消息", Category = ApiSearchCategory.Other)]
+    public async Task<IActionResult> BatchDeleteUserMessagesAsync([FromBody] List<Guid> recipientIds)
+    {
+        var userId = GetCurrentUserId() ?? throw new UnauthorizedAccessException("用户未登录");
+        var result = await _messageService.BatchDeleteUserMessagesAsync(recipientIds, userId);
+        if (!result.Success)
+            return BadRequest(result);
+        return NoContent();
+    }
+
+    /// <summary>
+    /// 撤回消息（只有发送者可以撤回）
+    /// </summary>
+    [HttpPost]
+    [ActionName("RevokeMessageAsync")]
+    [Permission("message:revoke")]
+    [ApiSearch(Name = "撤回消息", Description = "强制撤回已发出的通知，只有发送者可以操作", Category = ApiSearchCategory.Other)]
+    public async Task<ApiRequestResult> RevokeMessageAsync([FromQuery] Guid messageId)
+    {
+        var userId = GetCurrentUserId() ?? throw new UnauthorizedAccessException("用户未登录");
+        return await _messageService.RevokeMessageAsync(messageId, userId);
+    }
+
+    /// <summary>
+    /// 批量撤回消息
+    /// </summary>
+    [HttpPost]
+    [ActionName("BatchRevokeMessagesAsync")]
+    [Permission("message:revoke")]
+    [ApiSearch(Name = "批量撤回消息", Description = "批量撤回已发出的消息，只有发送者可以操作", Category = ApiSearchCategory.Other)]
+    public async Task<ApiRequestResult> BatchRevokeMessagesAsync([FromBody] List<Guid> messageIds)
+    {
+        var userId = GetCurrentUserId() ?? throw new UnauthorizedAccessException("用户未登录");
+        return await _messageService.BatchRevokeMessagesAsync(messageIds, userId);
+    }
+
+    /// <summary>
+    /// 获取所有消息列表（管理员）
+    /// </summary>
+    [HttpGet]
+    [ActionName("GetAllMessagesAsync")]
+    [Permission("message:view")]
+    [ApiSearch(Name = "获取所有消息列表", Description = "管理员获取所有消息列表", Category = ApiSearchCategory.Other)]
+    public async Task<ApiRequestResult> GetAllMessagesAsync([FromQuery] MessageQueryRequest request)
+    {
+        return await _messageService.GetAllMessagesAsync(request);
+    }
+
+    #endregion
 }

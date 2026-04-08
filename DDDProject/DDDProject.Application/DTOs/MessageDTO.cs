@@ -69,6 +69,21 @@ public class MessageDto
     /// 创建时间
     /// </summary>
     public DateTime CreatedAt { get; set; }
+
+    /// <summary>
+    /// 是否已撤回
+    /// </summary>
+    public bool IsRevoked { get; set; }
+
+    /// <summary>
+    /// 撤回时间
+    /// </summary>
+    public DateTime? RevokedTime { get; set; }
+
+    /// <summary>
+    /// 撤回人 ID
+    /// </summary>
+    public Guid? RevokedBy { get; set; }
 }
 
 /// <summary>
@@ -277,4 +292,243 @@ public class PushExistingMessageRequest
     /// 用户ID列表（PushType为user时使用）
     /// </summary>
     public List<Guid>? UserIds { get; set; }
+}
+
+/// <summary>
+/// 消息接收者 DTO
+/// </summary>
+public class MessageRecipientDto
+{
+    /// <summary>
+    /// 接收者记录ID
+    /// </summary>
+    public Guid Id { get; set; }
+
+    /// <summary>
+    /// 消息ID
+    /// </summary>
+    public Guid MessageId { get; set; }
+
+    /// <summary>
+    /// 接收者ID
+    /// </summary>
+    public Guid RecipientId { get; set; }
+
+    /// <summary>
+    /// 接收者用户名
+    /// </summary>
+    public string RecipientName { get; set; } = string.Empty;
+
+    /// <summary>
+    /// 是否已读
+    /// </summary>
+    public bool IsRead { get; set; }
+
+    /// <summary>
+    /// 阅读时间
+    /// </summary>
+    public DateTime? ReadTime { get; set; }
+
+    /// <summary>
+    /// 是否已删除
+    /// </summary>
+    public bool IsDeleted { get; set; }
+
+    /// <summary>
+    /// 创建时间
+    /// </summary>
+    public DateTime CreatedAt { get; set; }
+
+    /// <summary>
+    /// 是否已撤回
+    /// </summary>
+    public bool IsRevoked { get; set; }
+
+    /// <summary>
+    /// 撤回时间
+    /// </summary>
+    public DateTime? RevokedTime { get; set; }
+}
+
+/// <summary>
+/// 消息接收者查询请求
+/// </summary>
+public class MessageRecipientQueryRequest : PagedRequest
+{
+    /// <summary>
+    /// 消息ID
+    /// </summary>
+    public Guid? MessageId { get; set; }
+
+    /// <summary>
+    /// 接收者ID
+    /// </summary>
+    public Guid? RecipientId { get; set; }
+
+    /// <summary>
+    /// 是否已读
+    /// </summary>
+    public bool? IsRead { get; set; }
+
+    /// <summary>
+    /// 是否已删除
+    /// </summary>
+    public bool? IsDeleted { get; set; }
+}
+
+/// <summary>
+/// 消息详情 DTO（包含接收者列表）
+/// </summary>
+public class MessageDetailDto
+{
+    /// <summary>
+    /// 消息ID
+    /// </summary>
+    public Guid Id { get; set; }
+
+    /// <summary>
+    /// 发送者ID
+    /// </summary>
+    public Guid? SenderId { get; set; }
+
+    /// <summary>
+    /// 发送者用户名
+    /// </summary>
+    public string? SenderName { get; set; } = string.Empty;
+
+    /// <summary>
+    /// 消息标题
+    /// </summary>
+    public string Title { get; set; } = string.Empty;
+
+    /// <summary>
+    /// 消息内容
+    /// </summary>
+    public string Content { get; set; } = string.Empty;
+
+    /// <summary>
+    /// 消息类型：System, User
+    /// </summary>
+    public string MessageType { get; set; } = string.Empty;
+
+    /// <summary>
+    /// 消息优先级：Normal, Important, Urgent
+    /// </summary>
+    public string Priority { get; set; } = string.Empty;
+
+    /// <summary>
+    /// 是否已推送
+    /// </summary>
+    public bool IsPushed { get; set; }
+
+    /// <summary>
+    /// 推送时间
+    /// </summary>
+    public DateTime? PushedTime { get; set; }
+
+    /// <summary>
+    /// 创建时间
+    /// </summary>
+    public DateTime CreatedAt { get; set; }
+
+    /// <summary>
+    /// 接收者列表
+    /// </summary>
+    public List<MessageRecipientDto> Recipients { get; set; } = new();
+
+    /// <summary>
+    /// 接收者总数
+    /// </summary>
+    public int RecipientCount { get; set; }
+
+    /// <summary>
+    /// 已读数量
+    /// </summary>
+    public int ReadCount { get; set; }
+
+    /// <summary>
+    /// 未读数量
+    /// </summary>
+    public int UnreadCount { get; set; }
+}
+
+/// <summary>
+/// 用户消息视图 DTO（用于用户查看自己的消息）
+/// </summary>
+public class UserMessageDto
+{
+    /// <summary>
+    /// 接收者记录ID
+    /// </summary>
+    public Guid RecipientId { get; set; }
+
+    /// <summary>
+    /// 消息ID
+    /// </summary>
+    public Guid MessageId { get; set; }
+
+    /// <summary>
+    /// 发送者ID
+    /// </summary>
+    public Guid? SenderId { get; set; }
+
+    /// <summary>
+    /// 发送者用户名
+    /// </summary>
+    public string? SenderName { get; set; } = string.Empty;
+
+    /// <summary>
+    /// 消息标题
+    /// </summary>
+    public string Title { get; set; } = string.Empty;
+
+    /// <summary>
+    /// 消息内容
+    /// </summary>
+    public string Content { get; set; } = string.Empty;
+
+    /// <summary>
+    /// 消息类型：System, User
+    /// </summary>
+    public string MessageType { get; set; } = string.Empty;
+
+    /// <summary>
+    /// 消息优先级：Normal, Important, Urgent
+    /// </summary>
+    public string Priority { get; set; } = string.Empty;
+
+    /// <summary>
+    /// 是否已读
+    /// </summary>
+    public bool IsRead { get; set; }
+
+    /// <summary>
+    /// 阅读时间
+    /// </summary>
+    public DateTime? ReadTime { get; set; }
+
+    /// <summary>
+    /// 是否已推送
+    /// </summary>
+    public bool IsPushed { get; set; }
+
+    /// <summary>
+    /// 消息创建时间
+    /// </summary>
+    public DateTime CreatedAt { get; set; }
+
+    /// <summary>
+    /// 是否有其他用户已读（用于判断是否可删除）
+    /// </summary>
+    public bool HasBeenReadByOthers { get; set; }
+
+    /// <summary>
+    /// 是否已撤回
+    /// </summary>
+    public bool IsRevoked { get; set; }
+
+    /// <summary>
+    /// 撤回时间
+    /// </summary>
+    public DateTime? RevokedTime { get; set; }
 }

@@ -117,7 +117,7 @@ const loadSettings = async () => {
 
     // 从 API 获取所有设置（包括 JWT 配置和未缓存的系统配置）
     const response = await getAllSettings()
-    if (response.success && response.data) {
+    if (response.data) {
       const settings = response.data as SettingDto[]
       settings.forEach(setting => {
         // JWT 配置（不缓存）

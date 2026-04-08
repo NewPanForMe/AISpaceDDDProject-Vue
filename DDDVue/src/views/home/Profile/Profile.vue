@@ -184,7 +184,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { ElMessage, type FormInstance, type FormRules } from 'element-plus'
+import { type FormInstance, type FormRules } from 'element-plus'
 import { User, Clock, Edit, Lock, RefreshRight } from '@element-plus/icons-vue'
 import { getItem, setItem, StorageKeys, type UserDto } from '@/utils/storage'
 import { updateProfile, changePassword, getUserById } from '@/api/user'
@@ -248,7 +248,7 @@ const passwordForm = ref({
   confirmPassword: ''
 })
 
-const validateConfirmPassword = (rule: any, value: string, callback: any) => {
+const validateConfirmPassword = (_rule: any, value: string, callback: any) => {
   if (value !== passwordForm.value.newPassword) {
     callback(new Error('两次输入的密码不一致'))
   } else {
@@ -291,15 +291,15 @@ const formatDateTime = (dateStr?: string) => {
 // 从 localStorage 获取用户信息
 const getUserInfo = async () => {
   const storedInfo = getItem<UserDto>(StorageKeys.UserInfo)
-  if (storedInfo && storedInfo.userId) {
+  if (storedInfo && storedInfo.id) {
     // 尝试从服务器获取最新的用户信息
     try {
-      const response = await getUserById(storedInfo.userId)
-      if (response.success && response.data) {
+      const response = await getUserById(storedInfo.id)
+      if (response.data) {
         userInfo.value = response.data
         // 更新本地存储
         setItem(StorageKeys.UserInfo, {
-          userId: response.data.id,
+          id: response.data.id,
           userName: response.data.userName,
           realName: response.data.realName,
           email: response.data.email,
@@ -310,13 +310,13 @@ const getUserInfo = async () => {
 
         // 获取用户角色
         const rolesResponse = await getUserRoles(response.data.id)
-        if (rolesResponse.success && rolesResponse.data) {
+        if (rolesResponse.data) {
           userRoles.value = rolesResponse.data
         }
       } else {
         // 如果获取失败，使用本地存储的信息
         userInfo.value = {
-          id: storedInfo.userId || '',
+          id: storedInfo.id || '',
           userName: storedInfo.userName || '',
           realName: storedInfo.realName || '',
           email: storedInfo.email || '',
@@ -329,8 +329,8 @@ const getUserInfo = async () => {
 
         // 尝试获取用户角色
         try {
-          const rolesResponse = await getUserRoles(storedInfo.userId)
-          if (rolesResponse.success && rolesResponse.data) {
+          const rolesResponse = await getUserRoles(storedInfo.id)
+          if (rolesResponse.data) {
             userRoles.value = rolesResponse.data
           }
         } catch {
@@ -340,7 +340,7 @@ const getUserInfo = async () => {
     } catch {
       // 网络错误时使用本地存储的信息
       userInfo.value = {
-        id: storedInfo.userId || '',
+        id: storedInfo.id || '',
         userName: storedInfo.userName || '',
         realName: storedInfo.realName || '',
         email: storedInfo.email || '',
@@ -388,7 +388,7 @@ const handleUpdateProfile = async () => {
         if (response.data) {
           userInfo.value = response.data
           setItem(StorageKeys.UserInfo, {
-            userId: response.data.id,
+            id: response.data.id,
             userName: response.data.userName,
             realName: response.data.realName,
             email: response.data.email,
