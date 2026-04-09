@@ -15,17 +15,20 @@ public class MessageService : IMessageService
     private readonly IRepository<MessageRecipient> _recipientRepository;
     private readonly IRepository<User> _userRepository;
     private readonly IRepository<UserRole> _userRoleRepository;
+    private readonly IRepository<Role> _roleRepository;
 
     public MessageService(
         IRepository<Message> messageRepository,
         IRepository<MessageRecipient> recipientRepository,
         IRepository<User> userRepository,
-        IRepository<UserRole> userRoleRepository)
+        IRepository<UserRole> userRoleRepository,
+        IRepository<Role> roleRepository)
     {
         _messageRepository = messageRepository;
         _recipientRepository = recipientRepository;
         _userRepository = userRepository;
         _userRoleRepository = userRoleRepository;
+        _roleRepository = roleRepository;
     }
 
     /// <summary>
@@ -59,6 +62,13 @@ public class MessageService : IMessageService
     /// </summary>
     public async Task<ApiRequestResult> SendMessageAsync(Guid senderId, string senderName, CreateMessageRequest request)
     {
+        // 验证接收者是否存在
+        var receiver = await _userRepository.FindAsync(request.ReceiverId);
+        if (receiver is null)
+        {
+            return new ApiRequestResult { Success = false, Message = "接收者不存在" };
+        }
+
         var message = Message.CreateUserMessage(
             senderId,
             senderName,
@@ -85,6 +95,13 @@ public class MessageService : IMessageService
     /// </summary>
     public async Task<ApiRequestResult> SendSystemMessageAsync(Guid receiverId, string receiverName, string title, string content, string priority = MessagePriority.Normal)
     {
+        // 验证接收者是否存在
+        var receiver = await _userRepository.FindAsync(receiverId);
+        if (receiver is null)
+        {
+            return new ApiRequestResult { Success = false, Message = "接收者不存在" };
+        }
+
         var message = Message.CreateSystemMessage(
             receiverId,
             receiverName,
@@ -105,9 +122,9 @@ public class MessageService : IMessageService
     }
 
     /// <summary>
-    /// 批量发送系统消息
+    /// 批量发送系统消息                 PushMessageToAllAsync(PushMessageRequest request)
     /// </summary>
-    public async Task<ApiRequestResult> BatchSendSystemMessageAsync(BatchSendMessageRequest request)
+    public async Task<ApiRequestResult> BatchSendSystemMessageAsync(BatchSendMessageRequest request, Guid userId)
     {
         if (request.ReceiverIds is null || request.ReceiverIds.Count == 0)
         {
@@ -121,7 +138,7 @@ public class MessageService : IMessageService
         // 创建消息 - 使用 CreatePushMessage 静态方法
         var message = Message.CreatePushMessage(
             request.Title,
-            request.Content,
+            request.Content, userId,
             request.Priority
         );
 
@@ -156,6 +173,12 @@ public class MessageService : IMessageService
         if (recipient is null)
         {
             return new ApiRequestResult { Success = false, Message = "消息不存在" };
+        }
+
+        // 已撤回的消息不能标记为已读
+        if (recipient.IsRevoked)
+        {
+            return new ApiRequestResult { Success = false, Message = "已撤回的消息不能标记为已读" };
         }
 
         recipient.MarkAsRead();
@@ -202,14 +225,22 @@ public class MessageService : IMessageService
             return new ApiRequestResult { Success = false, Message = "未找到要标记的消息" };
         }
 
-        foreach (var recipient in recipients)
+        // 过滤掉已撤回的消息
+        var validRecipients = recipients.Where(r => !r.IsRevoked).ToList();
+
+        if (!validRecipients.Any())
+        {
+            return new ApiRequestResult { Success = false, Message = "选中的消息已撤回，无法标记为已读" };
+        }
+
+        foreach (var recipient in validRecipients)
         {
             recipient.MarkAsRead();
         }
 
         await _recipientRepository.SaveChangesAsync();
 
-        return new ApiRequestResult { Success = true, Message = $"成功标记 {recipients.Count()} 条消息为已读" };
+        return new ApiRequestResult { Success = true, Message = $"成功标记 {validRecipients.Count} 条消息为已读" };
     }
 
     /// <summary>
@@ -218,7 +249,7 @@ public class MessageService : IMessageService
     public async Task<ApiRequestResult> MarkAllAsReadAsync(Guid userId)
     {
         var recipients = await _recipientRepository.GetListAsync(
-            r => r.RecipientId == userId && !r.IsDeleted && !r.IsRead);
+            r => r.RecipientId == userId && !r.IsDeleted && !r.IsRead && !r.IsRevoked);
 
         if (recipients is null || !recipients.Any())
         {
@@ -344,8 +375,22 @@ public class MessageService : IMessageService
     /// <summary>
     /// 推送系统消息给所有用户
     /// </summary>
-    public async Task<ApiRequestResult> PushMessageToAllAsync(PushMessageRequest request)
+    public async Task<ApiRequestResult> PushMessageToAllAsync(PushMessageRequest request, Guid userId)
     {
+        // 验证用户是否具有管理员权限
+        var userRoles = await _userRoleRepository.GetListAsync(ur => ur.UserId == userId);
+        var roleIds = userRoles.Select(ur => ur.RoleId).ToList();
+        
+        var roles = await _roleRepository.GetListAsync(r => roleIds.Contains(r.Id));
+        var roleList = roles.ToList();
+        
+        // 检查是否有管理员权限（包括SUPER_ADMIN或其他管理员角色）
+        var isAdmin = roleList.Any(r => r.Code == "SUPER_ADMIN" || r.Code.Contains("ADMIN") || r.Code.Contains("admin"));
+        if (!isAdmin)
+        {
+            return new ApiRequestResult { Success = false, Message = "无权推送系统消息" };
+        }
+
         // 获取所有启用的用户
         var users = await _userRepository.GetListAsync(u => u.Status == 1);
         var userList = users.ToList();
@@ -358,7 +403,7 @@ public class MessageService : IMessageService
         // 创建消息 - 使用 CreatePushMessage 静态方法
         var message = Message.CreatePushMessage(
             request.Title,
-            request.Content,
+            request.Content,  userId,
             request.Priority
         );
 
@@ -380,21 +425,44 @@ public class MessageService : IMessageService
 
         return new ApiRequestResult { Success = true, Message = $"成功推送 {recipients.Count} 条系统消息" };
     }
+    
+    /// <summary>
+    /// 推送系统消息给所有用户（兼容旧方法，不推荐使用）
+    /// </summary>
+    public async Task<ApiRequestResult> PushMessageToAllAsync(PushMessageRequest request)
+    {
+        // 为保持向后兼容，这里返回错误信息，因为需要userId参数
+        return new ApiRequestResult { Success = false, Message = "缺少用户ID参数，无法验证权限" };
+    }
 
     /// <summary>
     /// 推送系统消息给指定角色的用户
     /// </summary>
-    public async Task<ApiRequestResult> PushMessageToRoleAsync(PushMessageToRoleRequest request)
+    public async Task<ApiRequestResult> PushMessageToRoleAsync(PushMessageToRoleRequest request, Guid userId)
     {
+        // 验证用户是否具有管理员权限
+        var userRoles = await _userRoleRepository.GetListAsync(ur => ur.UserId == userId);
+        var roleIds = userRoles.Select(ur => ur.RoleId).ToList();
+        
+        var roles = await _roleRepository.GetListAsync(r => roleIds.Contains(r.Id));
+        var roleList = roles.ToList();
+        
+        // 检查是否有管理员权限（包括SUPER_ADMIN或其他管理员角色）
+        var isAdmin = roleList.Any(r => r.Code == "SUPER_ADMIN" || r.Code.Contains("ADMIN") || r.Code.Contains("admin"));
+        if (!isAdmin)
+        {
+            return new ApiRequestResult { Success = false, Message = "无权推送系统消息" };
+        }
+
         if (request.RoleIds is null || request.RoleIds.Count == 0)
         {
             return new ApiRequestResult { Success = false, Message = "请选择角色" };
         }
 
         // 获取指定角色的用户ID
-        var userRoles = await _userRoleRepository.GetListAsync(
+        var userRolesForTarget = await _userRoleRepository.GetListAsync(
             ur => request.RoleIds.Contains(ur.RoleId));
-        var userRoleList = userRoles.ToList();
+        var userRoleList = userRolesForTarget.ToList();
 
         if (!userRoleList.Any())
         {
@@ -415,7 +483,7 @@ public class MessageService : IMessageService
         // 创建消息 - 使用 CreatePushMessage 静态方法
         var message = Message.CreatePushMessage(
             request.Title,
-            request.Content,
+            request.Content, userId,
             request.Priority
         );
 
@@ -437,6 +505,15 @@ public class MessageService : IMessageService
 
         return new ApiRequestResult { Success = true, Message = $"成功推送 {recipients.Count} 条系统消息" };
     }
+    
+    /// <summary>
+    /// 推送系统消息给指定角色的用户（兼容旧方法，不推荐使用）
+    /// </summary>
+    public async Task<ApiRequestResult> PushMessageToRoleAsync(PushMessageToRoleRequest request)
+    {
+        // 为保持向后兼容，这里返回错误信息，因为需要userId参数
+        return new ApiRequestResult { Success = false, Message = "缺少用户ID参数，无法验证权限" };
+    }
 
     /// <summary>
     /// 推送已有消息给其他用户
@@ -448,6 +525,34 @@ public class MessageService : IMessageService
         if (originalMessage is null)
         {
             return new ApiRequestResult { Success = false, Message = "消息不存在" };
+        }
+
+        // 验证推送权限：当前用户必须是原始消息的发送者或者是管理员
+        // 如果原始消息没有发送者（系统消息），则需要管理员权限
+        if (originalMessage.SenderId.HasValue)
+        {
+            // 用户消息：只有原始发送者可以推送
+            if (originalMessage.SenderId != userId)
+            {
+                return new ApiRequestResult { Success = false, Message = "无权推送此消息" };
+            }
+        }
+        else
+        {
+            // 系统消息：需要管理员权限
+            // 检查用户是否具有管理员权限
+            var userRoles = await _userRoleRepository.GetListAsync(ur => ur.UserId == userId);
+            var roleIds = userRoles.Select(ur => ur.RoleId).ToList();
+            
+            var roles = await _roleRepository.GetListAsync(r => roleIds.Contains(r.Id));
+            var roleList = roles.ToList();
+            
+            // 检查是否有管理员权限（包括SUPER_ADMIN或其他管理员角色）
+            var isAdmin = roleList.Any(r => r.Code == "SUPER_ADMIN" || r.Code.Contains("ADMIN") || r.Code.Contains("admin"));
+            if (!isAdmin)
+            {
+                return new ApiRequestResult { Success = false, Message = "无权推送系统消息" };
+            }
         }
 
         List<User> targetUsers = new List<User>();
@@ -505,6 +610,15 @@ public class MessageService : IMessageService
             u.RealName ?? u.UserName
         )).ToList();
 
+        // 如果原消息已撤回，新接收人记录也应该标记为撤回
+        if (originalMessage.IsRevoked)
+        {
+            foreach (var recipient in recipients)
+            {
+                recipient.Revoke();
+            }
+        }
+
         foreach (var recipient in recipients)
         {
             await _recipientRepository.AddAsync(recipient);
@@ -556,7 +670,9 @@ public class MessageService : IMessageService
                 IsRead = r.IsRead,
                 ReadTime = r.ReadTime,
                 IsDeleted = r.IsDeleted,
-                CreatedAt = r.CreatedAt
+                CreatedAt = r.CreatedAt,
+                IsRevoked = r.IsRevoked,
+                RevokedTime = r.RevokedTime
             }).ToList(),
             RecipientCount = recipientList.Count,
             ReadCount = recipientList.Count(r => r.IsRead),
@@ -603,7 +719,9 @@ public class MessageService : IMessageService
             IsRead = r.IsRead,
             ReadTime = r.ReadTime,
             IsDeleted = r.IsDeleted,
-            CreatedAt = r.CreatedAt
+            CreatedAt = r.CreatedAt,
+            IsRevoked = r.IsRevoked,
+            RevokedTime = r.RevokedTime
         }).ToList();
 
         var pagedResult = new PagedResult<MessageRecipientDto>
@@ -702,7 +820,7 @@ public class MessageService : IMessageService
                 var message = messageDict.GetValueOrDefault(r.MessageId);
                 // 检查是否有其他用户已读：同一条消息有其他接收者且已读
                 bool hasBeenReadByOthers = false;
-                if (message != null && readRecipientDict.TryGetValue(message.Id, out var readRecipientIds))
+                if (message is not null && readRecipientDict.TryGetValue(message.Id, out var readRecipientIds))
                 {
                     // 除了当前用户外，还有其他已读的接收者
                     hasBeenReadByOthers = readRecipientIds.Any(id => id != userId);
@@ -722,7 +840,9 @@ public class MessageService : IMessageService
                     ReadTime = r.ReadTime,
                     IsPushed = message?.IsPushed ?? false,
                     CreatedAt = message?.CreatedAt ?? r.CreatedAt,
-                    HasBeenReadByOthers = hasBeenReadByOthers
+                    HasBeenReadByOthers = hasBeenReadByOthers,
+                    IsRevoked = r.IsRevoked,
+                    RevokedTime = r.RevokedTime
                 };
             }).ToList();
 
@@ -783,11 +903,13 @@ public class MessageService : IMessageService
             ReadTime = recipient.ReadTime,
             IsPushed = message.IsPushed,
             CreatedAt = message.CreatedAt,
-            HasBeenReadByOthers = hasBeenReadByOthers
+            HasBeenReadByOthers = hasBeenReadByOthers,
+            IsRevoked = recipient.IsRevoked,
+            RevokedTime = recipient.RevokedTime
         };
 
-        // 自动标记为已读
-        if (!recipient.IsRead)
+        // 自动标记为已读（已撤回的消息不自动标记）
+        if (!recipient.IsRead && !recipient.IsRevoked)
         {
             recipient.MarkAsRead();
             await _recipientRepository.SaveChangesAsync();
@@ -810,6 +932,12 @@ public class MessageService : IMessageService
         if (recipient.RecipientId != userId)
         {
             return new ApiRequestResult { Success = false, Message = "无权操作此消息" };
+        }
+
+        // 已撤回的消息不能标记为已读
+        if (recipient.IsRevoked)
+        {
+            return new ApiRequestResult { Success = false, Message = "已撤回的消息不能标记为已读" };
         }
 
         recipient.MarkAsRead();

@@ -1,6 +1,6 @@
 import { http } from '@/utils/http'
 import api from '@/api/index'
-import type { PagedResult, MessageDto, UserMessageDto, MessageQueryRequest, CreateMessageRequest, BatchSendMessageRequest, MessageStatisticsDto, UpdateMessageRequest, PushMessageRequest, PushMessageToRoleRequest, PushExistingMessageRequest } from '@/api/index'
+import type { PagedResult, MessageDto, UserMessageDto, MessageQueryRequest, CreateMessageRequest, BatchSendMessageRequest, MessageStatisticsDto, UpdateMessageRequest, PushMessageRequest, PushMessageToRoleRequest, PushExistingMessageRequest, MessageDetailDto, MessageRecipientDto, MessageRecipientQueryRequest } from '@/api/index'
 
 // 获取消息列表（分页）- 返回用户消息视图
 export const getMessages = (params?: MessageQueryRequest) => {
@@ -115,4 +115,14 @@ export const revokeMessage = (messageId: string) => {
 // 批量撤回消息
 export const batchRevokeMessages = (messageIds: string[]) => {
   return http.post(api.Message.BatchRevokeMessagesAsync, messageIds)
+}
+
+// 获取消息详情（包含接收者列表）- 管理员查看
+export const getMessageDetail = (messageId: string) => {
+  return http.get<MessageDetailDto>(api.Message.GetMessageDetailAsync, { params: { messageId } })
+}
+
+// 获取消息接收者列表（分页）
+export const getMessageRecipients = (messageId: string, params?: MessageRecipientQueryRequest) => {
+  return http.get<PagedResult<MessageRecipientDto>>(api.Message.GetMessageRecipientsAsync, { params: { messageId, ...params } })
 }

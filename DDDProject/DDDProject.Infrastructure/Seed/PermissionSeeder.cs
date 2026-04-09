@@ -126,7 +126,9 @@ public static class PermissionSeeder
             Permission.Create("message:delete", "删除消息", "Message", "删除消息", null, 3),
             Permission.Create("message:send", "发送用户消息", "Message", "发送消息给指定用户", null, 4),
             Permission.Create("message:system", "发送系统消息", "Message", "发送系统消息", null, 5),
-            Permission.Create("message:push", "推送消息", "Message", "推送系统消息给所有或指定角色用户", null, 6)
+            Permission.Create("message:push", "推送消息", "Message", "推送系统消息给所有或指定角色用户", null, 6),
+            Permission.Create("message:revoke", "撤回消息", "Message", "撤回已发送的消息", null, 7),
+            Permission.Create("message:view", "查看消息详情", "Message", "查看消息详情及接收人阅读状态", null, 8)
         };
 
         return permissions;

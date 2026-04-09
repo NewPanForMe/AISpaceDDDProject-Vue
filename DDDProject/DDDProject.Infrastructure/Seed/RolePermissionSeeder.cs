@@ -54,7 +54,9 @@ public static class RolePermissionSeeder
                 // 系统设置
                 "setting:save_jwt", "setting:save_system",
                 // 缓存管理
-                "cache:clear_auth", "cache:clear_user", "cache:clear_menu", "cache:clear_list", "cache:clear_setting", "cache:clear_all"
+                "cache:clear_auth", "cache:clear_user", "cache:clear_menu", "cache:clear_list", "cache:clear_setting", "cache:clear_all",
+                // 站内信管理
+                "message:view", "message:push", "message:edit", "message:delete", "message:revoke", "message:send", "message:system"
             };
 
             var adminPermissions = context.Permissions
@@ -144,7 +146,9 @@ public static class RolePermissionSeeder
                 // 系统设置
                 "setting:save_jwt", "setting:save_system",
                 // 缓存管理
-                "cache:clear_auth", "cache:clear_user", "cache:clear_menu", "cache:clear_list", "cache:clear_setting", "cache:clear_all"
+                "cache:clear_auth", "cache:clear_user", "cache:clear_menu", "cache:clear_list", "cache:clear_setting", "cache:clear_all",
+                // 站内信管理
+                "message:view", "message:push", "message:edit", "message:delete", "message:revoke", "message:send", "message:system"
             };
 
             var adminPermissions = await context.Permissions
