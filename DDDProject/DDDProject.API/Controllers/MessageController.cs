@@ -90,7 +90,8 @@ public class MessageController : BaseApiController
     [ApiSearch(Name = "批量发送系统消息", Description = "批量发送系统消息给多个用户", Category = ApiSearchCategory.Other)]
     public async Task<ApiRequestResult> BatchSendSystemMessageAsync([FromBody] BatchSendMessageRequest request)
     {
-        return await _messageService.BatchSendSystemMessageAsync(request);
+        var userId = GetCurrentUserId() ?? throw new UnauthorizedAccessException("用户未登录");
+        return await _messageService.BatchSendSystemMessageAsync(request, userId);
     }
 
     /// <summary>
@@ -213,7 +214,8 @@ public class MessageController : BaseApiController
     [ApiSearch(Name = "推送消息给所有用户", Description = "推送系统消息给所有启用的用户", Category = ApiSearchCategory.Other)]
     public async Task<ApiRequestResult> PushMessageToAllAsync([FromBody] PushMessageRequest request)
     {
-        return await _messageService.PushMessageToAllAsync(request);
+        var userId = GetCurrentUserId() ?? throw new UnauthorizedAccessException("用户未登录");
+        return await _messageService.PushMessageToAllAsync(request, userId);
     }
 
     /// <summary>
@@ -225,7 +227,8 @@ public class MessageController : BaseApiController
     [ApiSearch(Name = "推送消息给角色用户", Description = "推送系统消息给指定角色的用户", Category = ApiSearchCategory.Other)]
     public async Task<ApiRequestResult> PushMessageToRoleAsync([FromBody] PushMessageToRoleRequest request)
     {
-        return await _messageService.PushMessageToRoleAsync(request);
+        var userId = GetCurrentUserId() ?? throw new UnauthorizedAccessException("用户未登录");
+        return await _messageService.PushMessageToRoleAsync(request, userId);
     }
 
     /// <summary>

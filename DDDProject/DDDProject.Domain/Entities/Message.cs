@@ -153,6 +153,8 @@ public class Message : AggregateRoot
     /// 创建推送消息（批量推送时使用，不指定单个接收者）
     /// </summary>
     public static Message CreatePushMessage(
+        Guid senderId,
+        string senderName,
         string title,
         string content,
         string priority = MessagePriority.Normal)
@@ -160,8 +162,8 @@ public class Message : AggregateRoot
         return new Message
         {
             Id = Guid.NewGuid(),
-            SenderId = null,
-            SenderName = "系统",
+            SenderId = senderId,
+            SenderName = string.IsNullOrWhiteSpace(senderName) ? "系统" : senderName,
             ReceiverId = Guid.Empty,
             ReceiverName = string.Empty,
             Title = title,

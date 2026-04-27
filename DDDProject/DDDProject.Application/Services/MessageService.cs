@@ -122,7 +122,7 @@ public class MessageService : IMessageService
     }
 
     /// <summary>
-    /// 批量发送系统消息                 PushMessageToAllAsync(PushMessageRequest request)
+    /// 批量发送系统消息
     /// </summary>
     public async Task<ApiRequestResult> BatchSendSystemMessageAsync(BatchSendMessageRequest request, Guid userId)
     {
@@ -134,11 +134,14 @@ public class MessageService : IMessageService
         // 获取用户信息
         var users = await _userRepository.GetListAsync(u => request.ReceiverIds.Contains(u.Id));
         var userList = users.ToList();
+        var senderName = await GetSenderDisplayNameAsync(userId);
 
-        // 创建消息 - 使用 CreatePushMessage 静态方法
+        // 创建推送消息
         var message = Message.CreatePushMessage(
+            userId,
+            senderName,
             request.Title,
-            request.Content, userId,
+            request.Content,
             request.Priority
         );
 
@@ -399,11 +402,14 @@ public class MessageService : IMessageService
         {
             return new ApiRequestResult { Success = false, Message = "没有可推送的用户" };
         }
+        var senderName = await GetSenderDisplayNameAsync(userId);
 
-        // 创建消息 - 使用 CreatePushMessage 静态方法
+        // 创建推送消息
         var message = Message.CreatePushMessage(
+            userId,
+            senderName,
             request.Title,
-            request.Content,  userId,
+            request.Content,
             request.Priority
         );
 
@@ -424,15 +430,6 @@ public class MessageService : IMessageService
         await _messageRepository.SaveChangesAsync();
 
         return new ApiRequestResult { Success = true, Message = $"成功推送 {recipients.Count} 条系统消息" };
-    }
-    
-    /// <summary>
-    /// 推送系统消息给所有用户（兼容旧方法，不推荐使用）
-    /// </summary>
-    public async Task<ApiRequestResult> PushMessageToAllAsync(PushMessageRequest request)
-    {
-        // 为保持向后兼容，这里返回错误信息，因为需要userId参数
-        return new ApiRequestResult { Success = false, Message = "缺少用户ID参数，无法验证权限" };
     }
 
     /// <summary>
@@ -479,11 +476,14 @@ public class MessageService : IMessageService
         {
             return new ApiRequestResult { Success = false, Message = "所选角色没有启用的用户" };
         }
+        var senderName = await GetSenderDisplayNameAsync(userId);
 
-        // 创建消息 - 使用 CreatePushMessage 静态方法
+        // 创建推送消息
         var message = Message.CreatePushMessage(
+            userId,
+            senderName,
             request.Title,
-            request.Content, userId,
+            request.Content,
             request.Priority
         );
 
@@ -504,15 +504,6 @@ public class MessageService : IMessageService
         await _messageRepository.SaveChangesAsync();
 
         return new ApiRequestResult { Success = true, Message = $"成功推送 {recipients.Count} 条系统消息" };
-    }
-    
-    /// <summary>
-    /// 推送系统消息给指定角色的用户（兼容旧方法，不推荐使用）
-    /// </summary>
-    public async Task<ApiRequestResult> PushMessageToRoleAsync(PushMessageToRoleRequest request)
-    {
-        // 为保持向后兼容，这里返回错误信息，因为需要userId参数
-        return new ApiRequestResult { Success = false, Message = "缺少用户ID参数，无法验证权限" };
     }
 
     /// <summary>
@@ -1179,6 +1170,19 @@ public class MessageService : IMessageService
         };
 
         return new ApiRequestResult { Success = true, Message = "操作成功", Data = pagedResult };
+    }
+
+    private async Task<string> GetSenderDisplayNameAsync(Guid userId)
+    {
+        var sender = await _userRepository.FindAsync(userId);
+        if (sender is null)
+        {
+            return "系统";
+        }
+
+        return string.IsNullOrWhiteSpace(sender.RealName)
+            ? sender.UserName
+            : sender.RealName;
     }
 
     #endregion

@@ -31,7 +31,7 @@ public interface IMessageService : IApplicationService
     /// <summary>
     /// 批量发送系统消息
     /// </summary>
-    Task<ApiRequestResult> BatchSendSystemMessageAsync(BatchSendMessageRequest request);
+    Task<ApiRequestResult> BatchSendSystemMessageAsync(BatchSendMessageRequest request, Guid userId);
 
     /// <summary>
     /// 标记消息为已读
@@ -81,12 +81,12 @@ public interface IMessageService : IApplicationService
     /// <summary>
     /// 推送系统消息给所有用户
     /// </summary>
-    Task<ApiRequestResult> PushMessageToAllAsync(PushMessageRequest request);
+    Task<ApiRequestResult> PushMessageToAllAsync(PushMessageRequest request, Guid userId);
 
     /// <summary>
     /// 推送系统消息给指定角色的用户
     /// </summary>
-    Task<ApiRequestResult> PushMessageToRoleAsync(PushMessageToRoleRequest request);
+    Task<ApiRequestResult> PushMessageToRoleAsync(PushMessageToRoleRequest request, Guid userId);
 
     /// <summary>
     /// 推送已有消息给其他用户

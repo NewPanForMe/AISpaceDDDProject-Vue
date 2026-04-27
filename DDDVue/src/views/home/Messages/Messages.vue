@@ -174,7 +174,7 @@
       <el-divider content-position="left">消息标题</el-divider>
       <div :class="{ 'message-title': true, 'revoked-message': currentMessage?.isRevoked }">{{ currentMessage?.title }}</div>
       <el-divider content-position="left">消息内容</el-divider>
-      <div :class="{ 'message-content': true, 'revoked-message': currentMessage?.isRevoked }">{{ currentMessage?.content }}</div>
+      <div :class="{ 'message-content': true, 'message-content-html': true, 'revoked-message': currentMessage?.isRevoked }" v-html="currentMessage?.content"></div>
       <template #footer>
         <span class="dialog-footer">
           <el-button @click="detailDialogVisible = false">关闭</el-button>
@@ -184,13 +184,13 @@
     </el-dialog>
 
     <!-- 修改消息对话框 -->
-    <el-dialog v-model="editDialogVisible" title="修改消息" width="500px" :destroy-on-close="true">
+    <el-dialog v-model="editDialogVisible" title="修改消息" width="700px" :destroy-on-close="true">
       <el-form :model="editForm" :rules="messageRules" ref="editFormRef" label-width="80px">
         <el-form-item label="消息标题" prop="title">
           <el-input v-model="editForm.title" placeholder="请输入消息标题" maxlength="100" show-word-limit />
         </el-form-item>
         <el-form-item label="消息内容" prop="content">
-          <el-input v-model="editForm.content" type="textarea" :rows="4" placeholder="请输入消息内容" maxlength="500" show-word-limit />
+          <RichTextEditor v-model="editForm.content" :height="250" placeholder="请输入消息内容" />
         </el-form-item>
         <el-form-item label="优先级" prop="priority">
           <el-select v-model="editForm.priority" placeholder="选择优先级" class="full-width">
@@ -207,7 +207,7 @@
     </el-dialog>
 
     <!-- 推送消息对话框 -->
-    <el-dialog v-model="pushDialogVisible" title="推送系统消息" width="500px" :destroy-on-close="true">
+    <el-dialog v-model="pushDialogVisible" title="推送系统消息" width="700px" :destroy-on-close="true">
       <el-form :model="pushForm" :rules="pushRules" ref="pushFormRef" label-width="80px">
         <el-form-item label="推送范围" prop="pushType">
           <el-radio-group v-model="pushForm.pushType">
@@ -224,7 +224,7 @@
           <el-input v-model="pushForm.title" placeholder="请输入消息标题" maxlength="100" show-word-limit />
         </el-form-item>
         <el-form-item label="消息内容" prop="content">
-          <el-input v-model="pushForm.content" type="textarea" :rows="4" placeholder="请输入消息内容" maxlength="500" show-word-limit />
+          <RichTextEditor v-model="pushForm.content" :height="250" placeholder="请输入消息内容" />
         </el-form-item>
         <el-form-item label="优先级" prop="priority">
           <el-select v-model="pushForm.priority" placeholder="选择优先级" class="full-width">
@@ -245,7 +245,7 @@
       <el-descriptions :column="1" border style="margin-bottom: 16px">
         <el-descriptions-item label="消息标题">{{ currentPushMessage?.title }}</el-descriptions-item>
         <el-descriptions-item label="消息内容">
-          <div class="content-preview">{{ currentPushMessage?.content }}</div>
+          <div class="content-preview content-preview-html" v-html="currentPushMessage?.content"></div>
         </el-descriptions-item>
       </el-descriptions>
       <el-form :model="pushExistingForm" :rules="pushExistingRules" ref="pushExistingFormRef" label-width="80px">
@@ -288,6 +288,7 @@ import type { UserMessageDto, MessageQueryRequest, UserDto, RoleDto, UpdateMessa
 import { showSuccessNotification, showErrorNotification } from '@/utils/notification'
 import { useButtons } from '@/utils/buttons'
 import { useDictionaries, DICT_TYPES } from '@/utils/dictionary'
+import RichTextEditor from '@/components/RichTextEditor.vue'
 
 const {
   getMessages,
@@ -389,10 +390,34 @@ const pushForm = reactive({
   priority: 'Normal'
 })
 
+const getPlainTextFromHtml = (html?: string) => {
+  if (!html) return ''
+
+  return html
+    .replace(/<[^>]*>/g, '')
+    .replace(/&nbsp;/gi, ' ')
+    .trim()
+}
+
+const validateMessageContent = (_rule: unknown, value: string, callback: (error?: Error) => void) => {
+  if (!value || value.length > 4000) {
+    callback(new Error('消息内容长度需在 1-4000 字符之间'))
+    return
+  }
+
+  const plainText = getPlainTextFromHtml(value)
+  if (!plainText) {
+    callback(new Error('请输入消息内容'))
+    return
+  }
+
+  callback()
+}
+
 // 表单验证规则
 const messageRules: FormRules = {
   title: [{ required: true, message: '请输入消息标题', trigger: 'blur' }],
-  content: [{ required: true, message: '请输入消息内容', trigger: 'blur' }],
+  content: [{ validator: validateMessageContent, trigger: 'change' }],
   priority: [{ required: true, message: '请选择优先级', trigger: 'change' }]
 }
 
@@ -411,7 +436,7 @@ const pushRules: FormRules = {
     }
   ],
   title: [{ required: true, message: '请输入消息标题', trigger: 'blur' }],
-  content: [{ required: true, message: '请输入消息内容', trigger: 'blur' }],
+  content: [{ validator: validateMessageContent, trigger: 'change' }],
   priority: [{ required: true, message: '请选择优先级', trigger: 'change' }]
 }
 
@@ -976,12 +1001,37 @@ onMounted(async () => {
   white-space: pre-wrap;
 }
 
+.message-content-html {
+  white-space: normal;
+  word-break: break-word;
+}
+
+.message-content-html :deep(p) {
+  margin: 0 0 8px;
+}
+
+.message-content-html :deep(p:last-child) {
+  margin-bottom: 0;
+}
+
 .content-preview {
   max-height: 100px;
   overflow-y: auto;
   line-height: 1.6;
   white-space: pre-wrap;
   word-break: break-all;
+}
+
+.content-preview-html {
+  white-space: normal;
+}
+
+.content-preview-html :deep(p) {
+  margin: 0 0 6px;
+}
+
+.content-preview-html :deep(p:last-child) {
+  margin-bottom: 0;
 }
 
 .revoked-message {
