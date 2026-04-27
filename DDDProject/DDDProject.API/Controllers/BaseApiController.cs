@@ -17,7 +17,7 @@ public class BaseApiController : ControllerBase
     protected Guid? GetCurrentUserId()
     {
         var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("sub");
-        if (userIdClaim != null && Guid.TryParse(userIdClaim.Value, out var userId))
+        if (userIdClaim is not null && Guid.TryParse(userIdClaim.Value, out var userId))
         {
             return userId;
         }

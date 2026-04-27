@@ -148,13 +148,10 @@ public class MessageController : BaseApiController
     [ActionName("DeleteMessageAsync")]
     [Permission("message:delete")]
     [ApiSearch(Name = "删除消息", Description = "删除指定消息", Category = ApiSearchCategory.Other)]
-    public async Task<IActionResult> DeleteMessageAsync([FromQuery] Guid id)
+    public async Task<ApiRequestResult> DeleteMessageAsync([FromQuery] Guid id)
     {
         var userId = GetCurrentUserId() ?? throw new UnauthorizedAccessException("用户未登录");
-        var result = await _messageService.DeleteMessageAsync(id, userId);
-        if (!result.Success)
-            return BadRequest(result);
-        return NoContent();
+        return await _messageService.DeleteMessageAsync(id, userId);
     }
 
     /// <summary>
@@ -164,13 +161,10 @@ public class MessageController : BaseApiController
     [ActionName("BatchDeleteMessagesAsync")]
     [Permission("message:delete")]
     [ApiSearch(Name = "批量删除消息", Description = "批量删除多条消息", Category = ApiSearchCategory.Other)]
-    public async Task<IActionResult> BatchDeleteMessagesAsync([FromBody] List<Guid> ids)
+    public async Task<ApiRequestResult> BatchDeleteMessagesAsync([FromBody] List<Guid> ids)
     {
         var userId = GetCurrentUserId() ?? throw new UnauthorizedAccessException("用户未登录");
-        var result = await _messageService.BatchDeleteMessagesAsync(ids, userId);
-        if (!result.Success)
-            return BadRequest(result);
-        return NoContent();
+        return await _messageService.BatchDeleteMessagesAsync(ids, userId);
     }
 
     /// <summary>
@@ -305,13 +299,10 @@ public class MessageController : BaseApiController
     [ActionName("DeleteUserMessageAsync")]
     [Permission("message:delete")]
     [ApiSearch(Name = "删除用户消息", Description = "通过接收者记录ID删除消息", Category = ApiSearchCategory.Other)]
-    public async Task<IActionResult> DeleteUserMessageAsync([FromQuery] Guid recipientId)
+    public async Task<ApiRequestResult> DeleteUserMessageAsync([FromQuery] Guid recipientId)
     {
         var userId = GetCurrentUserId() ?? throw new UnauthorizedAccessException("用户未登录");
-        var result = await _messageService.DeleteUserMessageAsync(recipientId, userId);
-        if (!result.Success)
-            return BadRequest(result);
-        return NoContent();
+        return await _messageService.DeleteUserMessageAsync(recipientId, userId);
     }
 
     /// <summary>
@@ -321,13 +312,10 @@ public class MessageController : BaseApiController
     [ActionName("BatchDeleteUserMessagesAsync")]
     [Permission("message:delete")]
     [ApiSearch(Name = "批量删除用户消息", Description = "通过接收者记录ID列表批量删除消息", Category = ApiSearchCategory.Other)]
-    public async Task<IActionResult> BatchDeleteUserMessagesAsync([FromBody] List<Guid> recipientIds)
+    public async Task<ApiRequestResult> BatchDeleteUserMessagesAsync([FromBody] List<Guid> recipientIds)
     {
         var userId = GetCurrentUserId() ?? throw new UnauthorizedAccessException("用户未登录");
-        var result = await _messageService.BatchDeleteUserMessagesAsync(recipientIds, userId);
-        if (!result.Success)
-            return BadRequest(result);
-        return NoContent();
+        return await _messageService.BatchDeleteUserMessagesAsync(recipientIds, userId);
     }
 
     /// <summary>

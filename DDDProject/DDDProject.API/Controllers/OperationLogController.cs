@@ -54,12 +54,9 @@ public class OperationLogController : BaseApiController
     [ActionName("DeleteOperationLogAsync")]
     [Permission("log:delete")]
     [ApiSearch(Name = "删除操作日志", Description = "根据ID删除操作日志", Category = ApiSearchCategory.Log)]
-    public async Task<IActionResult> DeleteOperationLogAsync([FromQuery] Guid id)
+    public async Task<ApiRequestResult> DeleteOperationLogAsync([FromQuery] Guid id)
     {
-        var result = await _logService.DeleteOperationLogAsync(id);
-        if (!result.Success)
-            return BadRequest(result);
-        return NoContent();
+        return await _logService.DeleteOperationLogAsync(id);
     }
 
     /// <summary>
@@ -69,12 +66,9 @@ public class OperationLogController : BaseApiController
     [ActionName("BatchDeleteOperationLogsAsync")]
     [Permission("log:delete")]
     [ApiSearch(Name = "批量删除操作日志", Description = "批量删除多条操作日志", Category = ApiSearchCategory.Log)]
-    public async Task<IActionResult> BatchDeleteOperationLogsAsync([FromBody] List<Guid> ids)
+    public async Task<ApiRequestResult> BatchDeleteOperationLogsAsync([FromBody] List<Guid> ids)
     {
-        var result = await _logService.BatchDeleteOperationLogsAsync(ids);
-        if (!result.Success)
-            return BadRequest(result);
-        return NoContent();
+        return await _logService.BatchDeleteOperationLogsAsync(ids);
     }
 
     /// <summary>

@@ -120,12 +120,9 @@ public class DictionaryController : BaseApiController
     [ActionName("DeleteDictionaryAsync")]
     [Permission("dictionary:delete")]
     [ApiSearch(Name = "删除字典", Description = "根据ID删除字典", Category = ApiSearchCategory.Dictionary)]
-    public async Task<IActionResult> DeleteDictionaryAsync([FromQuery] Guid id)
+    public async Task<ApiRequestResult> DeleteDictionaryAsync([FromQuery] Guid id)
     {
-        var result = await _dictionaryService.DeleteDictionaryAsync(id);
-        if (!result.Success)
-            return BadRequest(result);
-        return NoContent();
+        return await _dictionaryService.DeleteDictionaryAsync(id);
     }
 
     /// <summary>

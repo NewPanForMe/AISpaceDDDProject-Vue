@@ -378,7 +378,7 @@ public class MenuService : IMenuService
                 m.Id != menuDto.Id.Value &&
                 m.ParentId == menuDto.ParentId);
 
-            if (otherMenu is not  null)
+            if (otherMenu is not null)
             {
                 return new ApiRequestResult
                 {

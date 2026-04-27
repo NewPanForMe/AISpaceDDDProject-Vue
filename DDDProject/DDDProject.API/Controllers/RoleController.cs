@@ -83,12 +83,9 @@ public class RoleController : BaseApiController
     [ActionName("DeleteRoleAsync")]
     [Permission("role:delete")]
     [ApiSearch(Name = "删除角色", Description = "根据ID删除角色", Category = ApiSearchCategory.Role)]
-    public async Task<IActionResult> DeleteRoleAsync([FromQuery] Guid id)
+    public async Task<ApiRequestResult> DeleteRoleAsync([FromQuery] Guid id)
     {
-        var result = await _roleService.DeleteRoleAsync(id);
-        if (!result.Success)
-            return BadRequest(result);
-        return NoContent();
+        return await _roleService.DeleteRoleAsync(id);
     }
 
     /// <summary>
@@ -241,6 +238,7 @@ public class SettingController : BaseApiController
     /// </summary>
     [HttpPost]
     [ActionName("UpdateSettingAsync")]
+    [Permission("setting:edit")]
     [ApiSearch(Name = "更新设置", Description = "更新单个设置项", Category = ApiSearchCategory.Setting)]
     public async Task<ApiRequestResult> UpdateSettingAsync([FromBody] UpdateSettingRequest request)
     {
@@ -252,6 +250,7 @@ public class SettingController : BaseApiController
     /// </summary>
     [HttpPost]
     [ActionName("BatchUpdateSettingsAsync")]
+    [Permission("setting:edit")]
     [ApiSearch(Name = "批量更新设置", Description = "批量更新多个设置项", Category = ApiSearchCategory.Setting)]
     public async Task<ApiRequestResult> BatchUpdateSettingsAsync([FromBody] BatchUpdateSettingsRequest request)
     {
@@ -330,6 +329,7 @@ public class PermissionController : BaseApiController
     /// </summary>
     [HttpPost]
     [ActionName("CreatePermissionAsync")]
+    [Permission("permission:add")]
     [ApiSearch(Name = "创建权限", Description = "创建新的权限", Category = ApiSearchCategory.Role)]
     public async Task<ApiRequestResult> CreatePermissionAsync([FromBody] CreatePermissionRequest request)
     {
@@ -341,6 +341,7 @@ public class PermissionController : BaseApiController
     /// </summary>
     [HttpPut]
     [ActionName("UpdatePermissionAsync")]
+    [Permission("permission:edit")]
     [ApiSearch(Name = "更新权限", Description = "更新权限信息", Category = ApiSearchCategory.Role)]
     public async Task<ApiRequestResult> UpdatePermissionAsync([FromBody] UpdatePermissionRequest request)
     {
@@ -352,6 +353,7 @@ public class PermissionController : BaseApiController
     /// </summary>
     [HttpDelete]
     [ActionName("DeletePermissionAsync")]
+    [Permission("permission:delete")]
     [ApiSearch(Name = "删除权限", Description = "删除指定权限", Category = ApiSearchCategory.Role)]
     public async Task<ApiRequestResult> DeletePermissionAsync([FromQuery] Guid id)
     {
@@ -363,6 +365,7 @@ public class PermissionController : BaseApiController
     /// </summary>
     [HttpPost]
     [ActionName("EnablePermissionAsync")]
+    [Permission("permission:enable")]
     [ApiSearch(Name = "启用权限", Description = "启用指定权限", Category = ApiSearchCategory.Role)]
     public async Task<ApiRequestResult> EnablePermissionAsync([FromQuery] Guid id)
     {
@@ -374,6 +377,7 @@ public class PermissionController : BaseApiController
     /// </summary>
     [HttpPost]
     [ActionName("DisablePermissionAsync")]
+    [Permission("permission:disable")]
     [ApiSearch(Name = "禁用权限", Description = "禁用指定权限", Category = ApiSearchCategory.Role)]
     public async Task<ApiRequestResult> DisablePermissionAsync([FromQuery] Guid id)
     {
@@ -396,6 +400,7 @@ public class PermissionController : BaseApiController
     /// </summary>
     [HttpPost]
     [ActionName("AssignRolePermissionsAsync")]
+    [Permission("permission:assign")]
     [ApiSearch(Name = "分配角色权限", Description = "为角色分配权限", Category = ApiSearchCategory.Role)]
     public async Task<ApiRequestResult> AssignRolePermissionsAsync([FromBody] AssignRolePermissionsRequest request)
     {

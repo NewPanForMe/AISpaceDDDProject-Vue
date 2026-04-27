@@ -73,6 +73,8 @@ public static class PermissionSeeder
             Permission.Create("user:assign_role", "配置角色", "User", "为用户配置角色", null, 5),
             Permission.Create("user:enable", "启用用户", "User", "启用用户账号", null, 6),
             Permission.Create("user:disable", "禁用用户", "User", "禁用用户账号", null, 7),
+            Permission.Create("user:update_profile", "更新个人资料", "User", "更新当前用户的个人资料", null, 8),
+            Permission.Create("user:change_password", "修改密码", "User", "修改当前用户的密码", null, 9),
 
             // 角色管理权限
             Permission.Create("role:add", "添加角色", "Role", "添加新角色", null, 1),
@@ -87,6 +89,7 @@ public static class PermissionSeeder
             // 系统设置权限
             Permission.Create("setting:save_jwt", "保存JWT配置", "Setting", "保存JWT配置", null, 1),
             Permission.Create("setting:save_system", "保存系统配置", "Setting", "保存系统配置", null, 2),
+            Permission.Create("setting:edit", "编辑设置", "Setting", "编辑系统设置项", null, 3),
 
             // 权限管理权限
             Permission.Create("permission:add", "添加权限", "Permission", "添加新权限", null, 1),
@@ -94,6 +97,7 @@ public static class PermissionSeeder
             Permission.Create("permission:delete", "删除权限", "Permission", "删除权限", null, 3),
             Permission.Create("permission:enable", "启用权限", "Permission", "启用权限", null, 4),
             Permission.Create("permission:disable", "禁用权限", "Permission", "禁用权限", null, 5),
+            Permission.Create("permission:assign", "分配权限", "Permission", "为角色分配权限", null, 6),
 
             // 缓存管理权限
             Permission.Create("cache:clear_auth", "清除认证缓存", "Cache", "清除登录认证令牌", null, 1),

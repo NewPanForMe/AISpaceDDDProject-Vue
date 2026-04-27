@@ -83,12 +83,9 @@ public class UserController : BaseApiController
     [ActionName("DeleteUserAsync")]
     [Permission("user:delete")]
     [ApiSearch(Name = "删除用户", Description = "根据ID删除用户", Category = ApiSearchCategory.User)]
-    public async Task<IActionResult> DeleteUserAsync([FromQuery] Guid id)
+    public async Task<ApiRequestResult> DeleteUserAsync([FromQuery] Guid id)
     {
-        var result = await _userDataService.DeleteUserAsync(id);
-        if (!result.Success)
-            return BadRequest(result);
-        return NoContent();
+        return await _userDataService.DeleteUserAsync(id);
     }
 
     /// <summary>
@@ -132,11 +129,12 @@ public class UserController : BaseApiController
     /// </summary>
     [HttpPut]
     [ActionName("UpdateProfileAsync")]
+    [Permission("user:update_profile")]
     [ApiSearch(Name = "更新个人资料", Description = "更新当前用户的个人资料", Category = ApiSearchCategory.User)]
     public async Task<ApiRequestResult> UpdateProfileAsync([FromBody] UpdateProfileRequest request)
     {
         var userId = GetCurrentUserId();
-        if (userId == null)
+        if (userId is null)
         {
             return new ApiRequestResult
             {
@@ -152,11 +150,12 @@ public class UserController : BaseApiController
     /// </summary>
     [HttpPost]
     [ActionName("ChangePasswordAsync")]
+    [Permission("user:change_password")]
     [ApiSearch(Name = "修改密码", Description = "修改当前用户的密码", Category = ApiSearchCategory.User)]
     public async Task<ApiRequestResult> ChangePasswordAsync([FromBody] ChangePasswordRequest request)
     {
         var userId = GetCurrentUserId();
-        if (userId == null)
+        if (userId is null)
         {
             return new ApiRequestResult
             {

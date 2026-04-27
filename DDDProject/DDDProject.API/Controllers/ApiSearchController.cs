@@ -4,6 +4,7 @@ using System.Linq;
 using System.Reflection;
 using System.Text.Json;
 using DDDProject.Application.Interfaces;
+using DDDProject.Application.DTOs;
 
 namespace DDDProject.API.Controllers;
 
@@ -30,18 +31,31 @@ public class ApiSearchController : BaseApiController
     /// </summary>
     /// <returns>API列表的JSON字符串</returns>
     [HttpGet]
-    public string Search()
+    [ActionName("SearchAsync")]
+    public async Task<ApiRequestResult> SearchAsync()
     {
-        return _apiSearchService.GetApiSearchList();
+        var result = _apiSearchService.GetApiSearchList();
+        return await Task.FromResult(new ApiRequestResult
+        {
+            Success = true,
+            Data = result
+        });
     }
+
     /// <summary>
-    /// 获取所有标记了ApiSearch注解的API
+    /// 获取所有标记了ApiSearch注解的API（字符串格式）
     /// </summary>
     /// <returns>API列表的JSON字符串</returns>
     [HttpGet]
-    public string SearchStr()
+    [ActionName("SearchStrAsync")]
+    public async Task<ApiRequestResult> SearchStrAsync()
     {
-        return _apiSearchService.GetApiSearchListStr();
+        var result = _apiSearchService.GetApiSearchListStr();
+        return await Task.FromResult(new ApiRequestResult
+        {
+            Success = true,
+            Data = result
+        });
     }
 
     /// <summary>
@@ -50,9 +64,15 @@ public class ApiSearchController : BaseApiController
     /// <param name="category">分类名称</param>
     /// <returns>API列表的JSON字符串</returns>
     [HttpGet]
-    public string SearchByCategory(string category)
+    [ActionName("SearchByCategoryAsync")]
+    public async Task<ApiRequestResult> SearchByCategoryAsync(string category)
     {
-        return _apiSearchService.GetApiSearchListByCategory(category);
+        var result = _apiSearchService.GetApiSearchListByCategory(category);
+        return await Task.FromResult(new ApiRequestResult
+        {
+            Success = true,
+            Data = result
+        });
     }
 
     /// <summary>
@@ -61,8 +81,14 @@ public class ApiSearchController : BaseApiController
     /// <param name="keyword">关键词</param>
     /// <returns>API列表的JSON字符串</returns>
     [HttpGet]
-    public string SearchByKeyWord(string keyword)
+    [ActionName("SearchByKeyWordAsync")]
+    public async Task<ApiRequestResult> SearchByKeyWordAsync(string keyword)
     {
-        return _apiSearchService.GetApiSearchListByKeyWord(keyword);
+        var result = _apiSearchService.GetApiSearchListByKeyWord(keyword);
+        return await Task.FromResult(new ApiRequestResult
+        {
+            Success = true,
+            Data = result
+        });
     }
 }
